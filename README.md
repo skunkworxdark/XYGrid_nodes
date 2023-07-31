@@ -34,7 +34,7 @@ Known Bugs:
 4. XY Expand: This takes the output of the iterate node and expands it to individual x and y items as strings. The output of this needs to passed into the `XYImage Collect` Node as is. However before been used in standard nodes they will need to be converted into the correct type. This can be done with the `String To Int` and `String To Float` Nodes. 
 5. String To Float: Converts a string to a float this is needed to convert the output of the `XY Expand` node before it can be used by standard nodes.
 6. String To Int: Converts a string to an int this is needed to convert the output of the `XY Expand` node before it can be used by standard nodes.
-7. XYImage Collext: The job of this node is to collect the Image and the X and Y items in a single place so they can be passed onto the `Collect` node then onto the `XYImage To Grid` node.
+7. XYImage Collect: The job of this node is to collect the Image and the X and Y items in a single place so they can be passed onto the `Collect` node then onto the `XYImage To Grid` node.
 
 ## Using "Image To Grids" node
 The `Images To Grids` nodes is fairly stright forward to you you just collect images from multiple generation using a `Collect` and pass it into the nodes with the setting of what you want
