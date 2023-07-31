@@ -28,7 +28,7 @@ Known Bugs:
   - Left Label Width: Horizontal Size of the labels space at the left of the grid.
 
 ## Supporting Nodes:
-1. Floas To Strings: Takes a float or collections of floats and converts it to a collection of string. Output of this is intended for the `XY Collect` node.
+1. Floats To Strings: Takes a float or collections of floats and converts it to a collection of string. Output of this is intended for the `XY Collect` node.
 2. Ints To Strings: Takes an int or collection of ints and converts it to a collection of string. Output of this is intended for the `XY Collect` node.
 3. XY Collect:  This takes two string collections and converts it into another string collection that is the Product of the first two collections (every combination of the input collections). This is ment to be fed into the `Iterate` node so you can do a generation for each xy pair.
 4. XY Expand: This takes the output of the iterate node and expands it to individual x and y items as strings. The output of this needs to passed into the `XYImage Collect` Node as is. However before been used in standard nodes they will need to be converted into the correct type. This can be done with the `String To Int` and `String To Float` Nodes. 
