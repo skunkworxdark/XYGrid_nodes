@@ -35,6 +35,8 @@ Known Bugs:
 5. String To Float: Converts a string to a float this is needed to convert the output of the `XY Expand` node before it can be used by standard nodes.
 6. String To Int: Converts a string to an int this is needed to convert the output of the `XY Expand` node before it can be used by standard nodes.
 7. XYImage Collect: The job of this node is to collect the Image and the X and Y items in a single place so they can be passed onto the `Collect` node then onto the `XYImage To Grid` node.
+8. CSV To Strings: Converts a CSV string into a collection of strings
+9. XY CSV to Strings: takes two CSV strings and outputs a collection that every combination of X and Y this can be used insted of passing ranges into the the XY collect node
 
 ## Using "Image To Grids" node
 The `Images To Grids` nodes is fairly stright forward to you you just collect images from multiple generation using a `Collect` and pass it into the nodes with the setting of what you want
@@ -55,10 +57,13 @@ The `XY Expand` node also passes the unconverted X,Y to the `XYImage Collect` No
 ### Example XY Grid output
 ![image](https://github.com/skunkworxdark/XYGrid_nodes/assets/21961335/4711596a-d117-4b11-a39f-887b2e171cca)
 
+![image](https://github.com/skunkworxdark/XYGrid_nodes/assets/21961335/885a8720-0769-48b6-b5ee-09f7f2acb421)
+
+
+
 ### Images to Grids Node
 ![image](https://github.com/skunkworxdark/XYGrid_nodes/assets/21961335/04b99d55-a2cd-4b49-940a-4ae4f1ccfc55)
 ### XYImage to Grid Node
 ![Screenshot 2023-07-31 171623](https://github.com/skunkworxdark/XYGrid_nodes/assets/21961335/442761a9-9ed4-48b6-9d93-1c277f428395)
-
 
 
