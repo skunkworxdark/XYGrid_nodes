@@ -57,8 +57,9 @@ The `XY Expand` node also passes the unconverted X,Y to the `XYImage Collect` No
 ### Example XY Grid output
 ![image](https://github.com/skunkworxdark/XYGrid_nodes/assets/21961335/4711596a-d117-4b11-a39f-887b2e171cca)
 
+This example uses the `XY CSV to Strings` node and the `Prompt Join Three` node from my other nodes https://github.com/skunkworxdark/Prompt-tools-nodes 
 ![image](https://github.com/skunkworxdark/XYGrid_nodes/assets/21961335/885a8720-0769-48b6-b5ee-09f7f2acb421)
-
+![image](https://github.com/skunkworxdark/XYGrid_nodes/assets/21961335/7c712fdf-a1a8-49b5-b279-ed5ee7026afa)
 
 
 ### Images to Grids Node
