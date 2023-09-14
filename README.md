@@ -1,7 +1,12 @@
-# [images_to_grids.py](ImagesToGrid-rndRange.json) Nodes
+# images_to_grids.py Nodes
 InvokeAI nodes for `Images To Grids`, `XYImage To Grid` and supporting nodes
 
 ![Alt text](images/collage.png)
+## Usage
+If you want to use these nodes then you need to place the [images_to_grids.py](ImagesToGrid-rndRange.py) file in the folder `".venv\Lib\site-packages\invokeai\app\invocations"`. 
+
+## Discord Link
+The discord link for discussion is :- [XYImage To Grid](https://discord.com/channels/1020123559063990373/1133465385182699582) .
 
 ### Example workflows
 |Workflow|Description|
@@ -13,7 +18,7 @@ InvokeAI nodes for `Images To Grids`, `XYImage To Grid` and supporting nodes
 
 ### Known issues:
 - When the Grids are added to the gallery it will not automatically update onscreen.
-  - Either Refreesh the browser.
+  - Either Refresh the browser.
   - Or add an iterate node and a show image node off the grid node.
 - Unable to embed workflow into grid images
   - No workaround as yet you will have to embed is each of the individually generated images
@@ -21,7 +26,7 @@ InvokeAI nodes for `Images To Grids`, `XYImage To Grid` and supporting nodes
 
 ## Main Nodes  
 ### `Images To Grids` node
-Takes a collection of images and creates a grid(s) of images. If there are more images than the size of a single grid then mutilple grids will be created until it runs out of images.
+Takes a collection of images and creates a grid(s) of images. If there are more images than the size of a single grid then multiple grids will be created until it runs out of images.
 <details><summary>Workflow Example</summary>
 
 ![GridWorkflow](images/I2G-RndRangeWorkFlow.png)</details>
@@ -42,13 +47,13 @@ Takes a collection of images and creates a grid(s) of images. If there are more 
 |`Columns`| The number of images across in the grids|
 |`Rows`| The maximum rows per grid|
 |`Space`| The number of pixels gap between images|
-|`Scale Factor`| How much to resize the images by (values of 0...1 will reduce the image size, This is recomended if you have large images or large grids)|
+|`Scale Factor`| How much to resize the images by (values of 0...1 will reduce the image size, This is recommended if you have large images or large grids)|
 |`Resample Mode`| Resize type to use|
 |`Background Color`| Background color of the grid|
 </details>
 
 ### `XYImage To Grid` node
-Converts a collection of `XYImages` into a labeled Grid of images.  The `XYImages` collection has to be built using the XY Grid supporoting nodes. See example node setups for more details.
+Converts a collection of `XYImages` into a labeled Grid of images.  The `XYImages` collection has to be built using the XY Grid supporting nodes. See example node setups for more details.
 <details><summary>Workflow Examples</summary>
 
 ![XYImageGridWorkflow](images\XYGrid-CSV-CFG-Step-Workflow.png)![Alt text](images/XYGrid-CSV-prompt-Step-Workflow.png)</details>
@@ -67,12 +72,12 @@ Converts a collection of `XYImages` into a labeled Grid of images.  The `XYImage
 |-|-|
 |`XY Images`|This is the collection of images and XY items to add to the grid. It is used by `XYImage Collect` node and a `Collect` node and feeding this into this input|
 |`Space`|The number of pixels gap between images|
-|`Scale Factor`|How much to resize the images by (values of 0...1 will reduce the image size, This is recomended if you have large images or large grids)|
+|`Scale Factor`|How much to resize the images by (values of 0...1 will reduce the image size, This is recommended if you have large images or large grids)|
 |`Resample Mode`|Resize type to use|
 |`Background Color`| background color of the grid|
 |`Label Font Name`| Font to use for the labels Default "Ariel.ttf"|
-|`Label Front Size`| Size of the font to use for lables Default 35|
-|`Top Label Height`| Vertical size to the lables space at the top of the grid.|
+|`Label Front Size`| Size of the font to use for labels Default 35|
+|`Top Label Height`| Vertical size to the labels space at the top of the grid.|
 |`Left Label Width`| Horizontal Size of the labels space at the left of the grid.|
 |`Label Font Color`| Font color of the label|
 </details>
@@ -90,7 +95,7 @@ These Nodes provide a way of inputting or converting the X and Y data into a col
 |`Ints To Strings`|Takes an int or collection of ints and converts it to a collection of string. Output of this is intended for the `XY Collect` node.<BR> Intended use is take a float collection from an `Integer Range` node that can be passed into the `XY Collect` node.|
 |`CSV To Strings`|Takes a CSV string and converts it to a collection of strings.<BR> Output of this is intended as input to the `XY Collect` node. |
 |`XY Collect`|Takes X and Y string collections and outputs a collection that has every combination of X and Y as an `XY Collection`.<BR> This is then passed into an `iterate` node and each combination is then passed one at a time into the `XY Expand` node.|
-|`XY Collect CSV`|This is `CSV To Strings` and `XY Collect` in a single node. Taking X and Y CSV strings and outputing a collection that has every combination of X and Y as an `XY Collection`.<BR> This is then passed into an `iterate` node and each combination is then passed one at a time into the `XY Expand` node.|
+|`XY Collect CSV`|This is `CSV To Strings` and `XY Collect` in a single node. Taking X and Y CSV strings and outputting a collection that has every combination of X and Y as an `XY Collection`.<BR> This is then passed into an `iterate` node and each combination is then passed one at a time into the `XY Expand` node.|
 
 <details><summary>Node Examples</summary>
 
