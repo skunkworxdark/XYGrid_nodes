@@ -1,70 +1,113 @@
-# images_to_grids.py Nodes
+# [images_to_grids.py](ImagesToGrid-rndRange.json) Nodes
 InvokeAI nodes for `Images To Grids`, `XYImage To Grid` and supporting nodes
 
-Known Bugs:
-- The Grids are added to the gallery it will not update. To see the grid(s) in the gallery you will need to refresh your browser.
-- In the `XYImage To Grid` The default colour for the font is white but the node shows this as black. 
+![Alt text](images/collage.png)
 
-## Two Main Nodes  
+### Example workflows
+|Workflow|Description|
+|-|-|
+|[ImagesToGrid-rndRange.json](ImagesToGrid-rndRange.json)| Basic Images to Grid workflow using a Random Range|
+|[csv-cfg-prompt-xygrid.json](csv-cfg-prompt-xygrid.json)| XY Grid workflow example using Prompt and CFG Scale via CSV values|
+|[csv-cfg-step-xygrid.json](csv-cfg-step-xygrid.json)| XY Grid workflow example using Step and CFG Scale via CSV values|
+|[range-cfg-step-xygrid.json](range-cfg-step-xygrid.json)| XY Grid workflow example using Step and CFG Scale via Integer and Float ranges|
 
-### 1. "Images To Grids" node - Takes a collection of images and creates a grid(s) of images. If there are more images than the size of a single grid then mutilple grids will be created until it runs out of images.
-  - Images: This is the collection of images to add to the grids. It is used by collecting the images with a `Collect` node and feeding this into this input
-  - Columns: The number of images across in the grids
-  - Rows: The maximum rows per grid
-  - Space: The number of pixels gap between images
-  - Scale Factor: How much to resize the images by (values of 0...1 will reduce the image size, This is recomended if you have large images or large grids)
-  - Resample Mode: Resize type to use
-  - Background Color: Background color of the grid
-
-### 2. "XYImage To Grid" node - Converts a collection of XYImages into a labeled Grid of images.  The XYImages collection has to be built using the supporoting nodes. See example node setups for more details.
-  - Xyimages: This is the collection of images and XY items to add to the grid. It is used by `XYImage Collect` node and a `Collect` node and feeding this into this input
-  - Space: The number of pixels gap between images
-  - Scale Factor: How much to resize the images by (values of 0...1 will reduce the image size, This is recomended if you have large images or large grids)
-  - Resample Mode: Resize type to use
-  - Background Color: background color of the grid
-  - Label Font Name: Font to use for the labels Default "Ariel.ttf"
-  - Label Front Size: Size of the font to use for lables Default 35
-  - Top Label Height: Vertical size to the lables space at the top of the grid.
-  - Left Label Width: Horizontal Size of the labels space at the left of the grid.
-
-## Supporting Nodes:
-1. Floats To Strings: Takes a float or collections of floats and converts it to a collection of string. Output of this is intended for the `XY Collect` node.
-2. Ints To Strings: Takes an int or collection of ints and converts it to a collection of string. Output of this is intended for the `XY Collect` node.
-3. XY Collect:  This takes two string collections and converts it into another string collection that is the Product of the first two collections (every combination of the input collections). This is ment to be fed into the `Iterate` node so you can do a generation for each xy pair.
-4. XY Expand: This takes the output of the iterate node and expands it to individual x and y items as strings. The output of this needs to passed into the `XYImage Collect` Node as is. However before been used in standard nodes they will need to be converted into the correct type. This can be done with the `String To Int` and `String To Float` Nodes. 
-5. String To Float: Converts a string to a float this is needed to convert the output of the `XY Expand` node before it can be used by standard nodes.
-6. String To Int: Converts a string to an int this is needed to convert the output of the `XY Expand` node before it can be used by standard nodes.
-7. XYImage Collect: The job of this node is to collect the Image and the X and Y items in a single place so they can be passed onto the `Collect` node then onto the `XYImage To Grid` node.
-8. CSV To Strings: Converts a CSV string into a collection of strings
-9. XY CSV to Strings: takes two CSV strings and outputs a collection that every combination of X and Y this can be used insted of passing ranges into the the XY collect node
-
-## Using "Image To Grids" node
-The `Images To Grids` nodes is fairly stright forward to you you just collect images from multiple generation using a `Collect` and pass it into the nodes with the setting of what you want
-### Example node setup for Images To nodes
-![image](https://github.com/skunkworxdark/XYGrid_nodes/assets/21961335/1f90d2e9-4a07-471b-b12c-ad4ec852dae2)
-### Example images to Grid output 
-![image](https://github.com/skunkworxdark/XYGrid_nodes/assets/21961335/5c244862-dbcf-4c6f-b021-059bc4f66f10)
-![image](https://github.com/skunkworxdark/XYGrid_nodes/assets/21961335/1b3c8ec8-bc06-4dde-bacb-0a81b067b97b)
-
-## Using "XYImages To Grid" node
-The `XYImage To Grid` Node is much more involved as you need to setup and preserve the order of the X and Y data to allow the grid to be rendered in a way that makes any sense.
-### Eample node layout for XYImage To Grid
-![image](https://github.com/skunkworxdark/XYGrid_nodes/assets/21961335/08b1b1e0-de87-492e-941d-607b32bd2e7c)
-The lefthand side creates the ranges and combines then into every combination and then passes them into the iterate and then passes them out on the image ganeration part of the node.  Due to the current node limitations (unable to accept int and float into a single input) you have to convert the int or float range inputs into to strings so you have string types passed around then they have to be converted back to the correct type to use them in the text to latents node etc. Ideally I would like to fold it all into a single xy iterate node with  X, Y input that accept collections of any type and output the x,y on the other side.   Any help or suggestion on this would be good.
-![image](https://github.com/skunkworxdark/XYGrid_nodes/assets/21961335/7d2c1d3c-5207-4c96-a313-e59311cfc864)
-The `XY Expand` node also passes the unconverted X,Y to the `XYImage Collect` Node where the X,Y & image_name are put into a string collection (again it seems as I am unable to work out how to pass a collection of multiple types around). This is then passed into the `Collect` node when the `XYImage To Grid` node can then reconstruct the correct order for the grid and build the grid image.
-![image](https://github.com/skunkworxdark/XYGrid_nodes/assets/21961335/c2e8603c-24b1-47a3-a300-9b864854d47e)
-### Example XY Grid output
-![image](https://github.com/skunkworxdark/XYGrid_nodes/assets/21961335/4711596a-d117-4b11-a39f-887b2e171cca)
-
-This example uses the `XY CSV to Strings` node and the `Prompt Join Three` node from my other nodes https://github.com/skunkworxdark/Prompt-tools-nodes 
-![image](https://github.com/skunkworxdark/XYGrid_nodes/assets/21961335/885a8720-0769-48b6-b5ee-09f7f2acb421)
-![image](https://github.com/skunkworxdark/XYGrid_nodes/assets/21961335/7c712fdf-a1a8-49b5-b279-ed5ee7026afa)
+### Known issues:
+- When the Grids are added to the gallery it will not automatically update onscreen.
+  - Either Refreesh the browser.
+  - Or add an iterate node and a show image node off the grid node.
+- Unable to embed workflow into grid images
+  - No workaround as yet you will have to embed is each of the individually generated images
 
 
-### Images to Grids Node
-![image](https://github.com/skunkworxdark/XYGrid_nodes/assets/21961335/04b99d55-a2cd-4b49-940a-4ae4f1ccfc55)
-### XYImage to Grid Node
-![Screenshot 2023-07-31 171623](https://github.com/skunkworxdark/XYGrid_nodes/assets/21961335/442761a9-9ed4-48b6-9d93-1c277f428395)
+## Main Nodes  
+### `Images To Grids` node
+Takes a collection of images and creates a grid(s) of images. If there are more images than the size of a single grid then mutilple grids will be created until it runs out of images.
+<details><summary>Workflow Example</summary>
 
+![GridWorkflow](images/I2G-RndRangeWorkFlow.png)</details>
+
+<details><summary>Output Example</summary>
+
+![GridExample1](images/GridExample2-1.png)![GridExample2](images/GridExample2-2.png)</details>
+
+<details><summary>Node</summary>
+
+![ImageToGridNode](images/ImagesToGridsNode.png)</details>
+
+<details><summary>Input Descriptions</summary>
+
+|Input|Description|
+|-|-|
+|`Images`| This is the collection of images to add to the grids. It is used by collecting the images with a `Collect` node and feeding this into this input|
+|`Columns`| The number of images across in the grids|
+|`Rows`| The maximum rows per grid|
+|`Space`| The number of pixels gap between images|
+|`Scale Factor`| How much to resize the images by (values of 0...1 will reduce the image size, This is recomended if you have large images or large grids)|
+|`Resample Mode`| Resize type to use|
+|`Background Color`| Background color of the grid|
+</details>
+
+### `XYImage To Grid` node
+Converts a collection of `XYImages` into a labeled Grid of images.  The `XYImages` collection has to be built using the XY Grid supporoting nodes. See example node setups for more details.
+<details><summary>Workflow Examples</summary>
+
+![XYImageGridWorkflow](images\XYGrid-CSV-CFG-Step-Workflow.png)![Alt text](images/XYGrid-CSV-prompt-Step-Workflow.png)</details>
+
+<details><summary>Output Example</summary>
+
+![GridExample1](images/XYGridExample1.png)![GridExample1](images/XYGridExample2.png)</details>
+
+<details><summary>Node</summary>
+
+![ImageToGridNode](images/ImagesToGridsNode.png)</details>
+
+<details><summary>Input Descriptions</summary>
+
+|Input|Description|
+|-|-|
+|`XY Images`|This is the collection of images and XY items to add to the grid. It is used by `XYImage Collect` node and a `Collect` node and feeding this into this input|
+|`Space`|The number of pixels gap between images|
+|`Scale Factor`|How much to resize the images by (values of 0...1 will reduce the image size, This is recomended if you have large images or large grids)|
+|`Resample Mode`|Resize type to use|
+|`Background Color`| background color of the grid|
+|`Label Font Name`| Font to use for the labels Default "Ariel.ttf"|
+|`Label Front Size`| Size of the font to use for lables Default 35|
+|`Top Label Height`| Vertical size to the lables space at the top of the grid.|
+|`Left Label Width`| Horizontal Size of the labels space at the left of the grid.|
+|`Label Font Color`| Font color of the label|
+</details>
+
+## XYGrid Supporting Nodes
+These nodes are used to create the `XY Images` collection that drives the `XYImage To Grid` Node.<BR>  The workflow is as follows `XY Data Inputs` and/or `XY Collect` -> `Iterate` -> `XY Expand` -> `XY Image Collect` -> `Collect` -> `XYImages to Grid`
+
+The best way to understand this is to look at the XYGrid workflow examples and play with them.
+
+### XY Data Inputs and Collect Nodes
+These Nodes provide a way of inputting or converting the X and Y data into a collection of strings that the `XY Collect` Node can use.
+|Node|Description|
+|-|-|
+|`Floats To Strings`|Takes a float or collections of floats and converts it to a collection of string.<BR> Intended use is take a float collection from a `Float Range` node that can be passed into the `XY Collect` node.|
+|`Ints To Strings`|Takes an int or collection of ints and converts it to a collection of string. Output of this is intended for the `XY Collect` node.<BR> Intended use is take a float collection from an `Integer Range` node that can be passed into the `XY Collect` node.|
+|`CSV To Strings`|Takes a CSV string and converts it to a collection of strings.<BR> Output of this is intended as input to the `XY Collect` node. |
+|`XY Collect`|Takes X and Y string collections and outputs a collection that has every combination of X and Y as an `XY Collection`.<BR> This is then passed into an `iterate` node and each combination is then passed one at a time into the `XY Expand` node.|
+|`XY Collect CSV`|This is `CSV To Strings` and `XY Collect` in a single node. Taking X and Y CSV strings and outputing a collection that has every combination of X and Y as an `XY Collection`.<BR> This is then passed into an `iterate` node and each combination is then passed one at a time into the `XY Expand` node.|
+
+<details><summary>Node Examples</summary>
+
+![CSV CFG Step Example](images/XY-Collect-CSV-example.png)
+![CSV Prompt Step text](images/XY-Collect-int-float-example.png)
+![CSV CFG Step Example](images/XY-Collect-CSVToStrings-example.png)</details>
+
+### XY Expand , Data Output & XY Image Collect nodes
+|Node|Description|
+|-|-|
+|`XY Expand`|This takes the `XY Collection` output of the iterate node and expands it to individual X and Y items as strings.<BR>  The output of this needs to be passed into the `XYImage Collect` Node as is. It can also be used directly into nodes that accept strings e.g. Prompt.  However before been used as input to other nodes they will need to be converted into the correct type. This can be done with the `String To Float` and `String To Int` Nodes|
+|`String To Float`|Converts a string to a float. This is needed to convert the output of the `XY Expand` node before it can be used as input by nodes that accept the float data type e.g. CFG, Denoise start/end etc...|
+|`String To Int`|Converts a string to an integer. This is needed to convert the output of the `XY Expand` node before it can be used as input by nodes that accept the integer data type e.g. Step, Width, Height etc....|
+|`XYImage Collect`|The job of this node is to collect the generated Images and the X and Y items in a single place so they can be passed onto the `Collect` node then onto the `XYImage To Grid` node.|
+
+<details><summary>Node Examples</summary>
+
+![XY Expand and XY Image Collect](images/XY-Expand-ImageCollect-example.png)
+![Alt text](images/XY-CSV-Expand-ToString-ImageCollect-example.png)</details>
 
