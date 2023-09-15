@@ -13,8 +13,10 @@ The discord link for discussion is :- [XYImage To Grid](https://discord.com/chan
 |-|-|
 |[ImagesToGrid-rndRange.json](ImagesToGrid-rndRange.json)| Basic Images to Grid workflow using a Random Range|
 |[csv-cfg-prompt-xygrid.json](csv-cfg-prompt-xygrid.json)| XY Grid workflow example using Prompt and CFG Scale via CSV values|
+|[csv-step-scheduler-xygrid.json](csv-step-scheduler-xygrid.json)| XY Grid workflow example using scheduler and Step via CSV values|
 |[csv-cfg-step-xygrid.json](csv-cfg-step-xygrid.json)| XY Grid workflow example using Step and CFG Scale via CSV values|
 |[range-cfg-step-xygrid.json](range-cfg-step-xygrid.json)| XY Grid workflow example using Step and CFG Scale via Integer and Float ranges|
+
 
 ### Known issues
 - When the Grids are added to the gallery it will not automatically update onscreen.
