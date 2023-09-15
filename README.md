@@ -16,13 +16,18 @@ The discord link for discussion is :- [XYImage To Grid](https://discord.com/chan
 |[csv-cfg-step-xygrid.json](csv-cfg-step-xygrid.json)| XY Grid workflow example using Step and CFG Scale via CSV values|
 |[range-cfg-step-xygrid.json](range-cfg-step-xygrid.json)| XY Grid workflow example using Step and CFG Scale via Integer and Float ranges|
 
-### Known issues:
+### Known issues
 - When the Grids are added to the gallery it will not automatically update onscreen.
   - Either Refresh the browser.
   - Or add an iterate node and a show image node off the grid node.
 - Unable to embed workflow into grid images
   - No workaround as yet you will have to embed is each of the individually generated images
+- The generation will crash and stop if an invalid scheduler is passed in
 
+### TODO
+- Grid still doesn't appear in the board without workarounds
+- Other type to string and string to type conversions for other parameters like  Model, Lora, images etc..
+- a useable way to select multiple things from a list (some kind of checkbox selection) to enable selecting things from lists like models and loras etc
 
 ## Main Nodes  
 ### `Images To Grids` node
@@ -109,10 +114,12 @@ These Nodes provide a way of inputting or converting the X and Y data into a col
 |`XY Expand`|This takes the `XY Collection` output of the iterate node and expands it to individual X and Y items as strings.<BR>  The output of this needs to be passed into the `XYImage Collect` Node as is. It can also be used directly into nodes that accept strings e.g. Prompt.  However before been used as input to other nodes they will need to be converted into the correct type. This can be done with the `String To Float` and `String To Int` Nodes|
 |`String To Float`|Converts a string to a float. This is needed to convert the output of the `XY Expand` node before it can be used as input by nodes that accept the float data type e.g. CFG, Denoise start/end etc...|
 |`String To Int`|Converts a string to an integer. This is needed to convert the output of the `XY Expand` node before it can be used as input by nodes that accept the integer data type e.g. Step, Width, Height etc....|
+|`String To Scheduler`|Converts a string to a scheduler. This is needed to convert the output of the `XY Expand` node before it can be used as input by nodes that accept the scheduler data type.  Scheduler has to be provided as a string via a `CSV` and `string` based node in the internal name format. At thw time of writing this can only be from the following values (ddim,ddpm,deis,lms,lms_k,pndm,heun,heun_k,euler,euler_k,euler_a,kdpm_2,kdpm_2_a,dpmpp_2s,dpmpp_2s_k,dpmpp_2m,dpmpp_2m_k,dpmpp_2m_sde,dpmpp_2m_sde_k,dpmpp_sde,dpmpp_sde_k,unipc) if in the future these are added to then the list can be found in the core schedulers.py file|
 |`XYImage Collect`|The job of this node is to collect the generated Images and the X and Y items in a single place so they can be passed onto the `Collect` node then onto the `XYImage To Grid` node.|
 
 <details><summary>Node Examples</summary>
 
 ![XY Expand and XY Image Collect](images/XY-Expand-ImageCollect-example.png)
-![Alt text](images/XY-CSV-Expand-ToString-ImageCollect-example.png)</details>
+![Alt text](images/XY-CSV-Expand-ToString-ImageCollect-example.png)
+![Alt text](images/XYCollectCSV-Scheduler-example.png)</details>
 

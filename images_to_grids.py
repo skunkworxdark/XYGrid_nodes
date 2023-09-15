@@ -18,7 +18,10 @@ from invokeai.app.invocations.baseinvocation import (
     invocation,
     invocation_output,
 )
-from invokeai.app.invocations.image import PIL_RESAMPLING_MAP, PIL_RESAMPLING_MODES
+from invokeai.app.invocations.image import (
+    PIL_RESAMPLING_MAP,
+    PIL_RESAMPLING_MODES,
+)
 from invokeai.app.invocations.primitives import (
     ColorField,
     FloatOutput,
@@ -28,7 +31,14 @@ from invokeai.app.invocations.primitives import (
     StringCollectionOutput,
     StringOutput,
 )
-from invokeai.app.models.image import ImageCategory, ResourceOrigin
+from invokeai.app.models.image import (
+    ImageCategory,
+    ResourceOrigin,
+)
+from invokeai.app.invocations.latent import (
+    SAMPLER_NAME_VALUES,
+    SchedulerOutput,
+)
 
 
 @invocation(
@@ -97,7 +107,7 @@ class CSVToStringsInvocation(BaseInvocation):
 class StringToFloatInvocation(BaseInvocation):
     """StringToFloat converts a string to a float"""
 
-    float_string: str = InputField(description="string containg a float to convert")
+    float_string: str = InputField(description="string containing a float to convert")
 
     def invoke(self, context: InvocationContext) -> FloatOutput:
         return FloatOutput(value=float(self.float_string))
@@ -117,6 +127,23 @@ class StringToIntInvocation(BaseInvocation):
 
     def invoke(self, context: InvocationContext) -> IntegerOutput:
         return IntegerOutput(value=int(self.int_string))
+
+
+@invocation(
+    "string_to_scheduler",
+    title="String To Scheduler",
+    tags=["scheduler"],
+    category="util",
+    version="1.0.0",
+)
+class StringToSchedulerInvocation(BaseInvocation):
+    """StringToScheduler converts a string to a scheduler"""
+
+    # ddim,ddpm,deis,lms,lms_k,pndm,heun,heun_k,euler,euler_k,euler_a,kdpm_2,kdpm_2_a,dpmpp_2s,dpmpp_2s_k,dpmpp_2m,dpmpp_2m_k,dpmpp_2m_sde,dpmpp_2m_sde_k,dpmpp_sde,dpmpp_sde_k,unipc
+    scheduler_string: str = InputField(description="string containing a scheduler to convert")
+
+    def invoke(self, context: InvocationContext) -> SchedulerOutput:
+        return SchedulerOutput(scheduler=self.scheduler_string.strip().lower())
 
 
 @invocation_output("xy_collect_output")
@@ -228,17 +255,40 @@ class XYImagesToGridInvocation(BaseInvocation):
         description="The xyImage Collection",
         ui_type=UIType.Collection,
     )
-    space: int = InputField(default=1, ge=0, description="The space to be added between images")
-    scale_factor: Optional[float] = InputField(default=1.0, gt=0, description="The factor by which to scale the images")
-    resample_mode: PIL_RESAMPLING_MODES = InputField(default="bicubic", description="The resampling mode")
+    space: int = InputField(
+        default=1,
+        ge=0,
+        description="The space to be added between images",
+    )
+    scale_factor: Optional[float] = InputField(
+        default=1.0,
+        gt=0,
+        description="The factor by which to scale the images",
+    )
+    resample_mode: PIL_RESAMPLING_MODES = InputField(
+        default="bicubic",
+        description="The resampling mode",
+    )
     background_color: ColorField = InputField(
         default=ColorField(r=0, g=0, b=0, a=255),
         description="The color to use as the background",
     )
-    label_font_name: str = InputField(default="arial.ttf", description="Name of the font to use for labels")
-    label_font_size: int = InputField(default=35, description="Size of the font to use for labels")
-    top_label_height: int = InputField(default=50, description="Height of the top label area")
-    left_label_width: int = InputField(default=100, description="Width of the left label area")
+    label_font_name: str = InputField(
+        default="arial.ttf",
+        description="Name of the font to use for labels",
+    )
+    label_font_size: int = InputField(
+        default=35,
+        description="Size of the font to use for labels",
+    )
+    top_label_height: int = InputField(
+        default=50,
+        description="Height of the top label area",
+    )
+    left_label_width: int = InputField(
+        default=100,
+        description="Width of the left label area",
+    )
     label_font_color: ColorField = InputField(
         default=ColorField(r=255, g=255, b=255, a=255),
         description="The color to use for the label font",
@@ -371,18 +421,37 @@ class XYImagesToGridInvocation(BaseInvocation):
     version="1.0.0",
 )
 class ImagesToGridsInvocation(BaseInvocation):
-    """Load a collection of images and creat grid images from it and output a collection of genereated grid images"""
+    """Load a collection of images and create grid images from it and output a collection of generated grid images"""
 
     images: list[ImageField] = InputField(
         default_factory=list,
         description="The image collection to turn into grids",
         ui_type=UIType.ImageCollection,
     )
-    columns: int = InputField(default=1, ge=1, description="The number of columns in each grid")
-    rows: int = InputField(default=1, ge=1, description="The nuber of rows to have in each grid")
-    space: int = InputField(default=1, ge=0, description="The space to be added between images")
-    scale_factor: Optional[float] = InputField(default=1.0, gt=0, description="The factor by which to scale the images")
-    resample_mode: PIL_RESAMPLING_MODES = InputField(default="bicubic", description="The resampling mode")
+    columns: int = InputField(
+        default=1,
+        ge=1,
+        description="The number of columns in each grid",
+    )
+    rows: int = InputField(
+        default=1,
+        ge=1,
+        description="The number of rows to have in each grid",
+    )
+    space: int = InputField(
+        default=1,
+        ge=0,
+        description="The space to be added between images",
+    )
+    scale_factor: Optional[float] = InputField(
+        default=1.0,
+        gt=0,
+        description="The factor by which to scale the images",
+    )
+    resample_mode: PIL_RESAMPLING_MODES = InputField(
+        default="bicubic",
+        description="The resampling mode",
+    )
     background_color: ColorField = InputField(
         default=ColorField(r=0, g=0, b=0, a=255),
         description="The color to use as the background",
