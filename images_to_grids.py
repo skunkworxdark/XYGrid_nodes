@@ -18,10 +18,8 @@ from invokeai.app.invocations.baseinvocation import (
     invocation,
     invocation_output,
 )
-from invokeai.app.invocations.image import (
-    PIL_RESAMPLING_MAP,
-    PIL_RESAMPLING_MODES,
-)
+from invokeai.app.invocations.image import PIL_RESAMPLING_MAP, PIL_RESAMPLING_MODES
+from invokeai.app.invocations.latent import SAMPLER_NAME_VALUES, SchedulerOutput
 from invokeai.app.invocations.primitives import (
     ColorField,
     FloatOutput,
@@ -31,14 +29,7 @@ from invokeai.app.invocations.primitives import (
     StringCollectionOutput,
     StringOutput,
 )
-from invokeai.app.models.image import (
-    ImageCategory,
-    ResourceOrigin,
-)
-from invokeai.app.invocations.latent import (
-    SAMPLER_NAME_VALUES,
-    SchedulerOutput,
-)
+from invokeai.app.models.image import ImageCategory, ResourceOrigin
 
 
 @invocation(
@@ -51,7 +42,7 @@ from invokeai.app.invocations.latent import (
 class FloatsToStringsInvocation(BaseInvocation):
     """FloatsToStrings converts a float or collections of floats to a collection of strings"""
 
-    floats: Union[float, list[float]] = InputField(default_factory=list, description="float or collection of floats")
+    floats: Union[float, list[float]] = InputField(default_factory=list, description="float or collection of floats",)
 
     def invoke(self, context: InvocationContext) -> StringCollectionOutput:
         if self.floats is None:
@@ -71,7 +62,7 @@ class FloatsToStringsInvocation(BaseInvocation):
 class IntsToStringsInvocation(BaseInvocation):
     """IntsToStrings converts an int or collection of ints to a collection of strings"""
 
-    ints: Union[int, list[int]] = InputField(default_factory=list, description="int or collection of ints")
+    ints: Union[int, list[int]] = InputField(default_factory=list, description="int or collection of ints",)
 
     def invoke(self, context: InvocationContext) -> StringCollectionOutput:
         if self.ints is None:
@@ -248,7 +239,7 @@ class XYImageCollectInvocation(BaseInvocation):
     version="1.0.0",
 )
 class XYImagesToGridInvocation(BaseInvocation):
-    """Load a collection of xyimage types (json of (x_item,y_item,image_name)array) and create a gridimage of them"""
+    """Load a collection of xyimage types (json of (x_item,y_item,image_name)array) and create a grid image of them"""
 
     xyimages: list[str] = InputField(
         default_factory=list,
