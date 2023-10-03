@@ -10,6 +10,8 @@ from PIL import Image, ImageDraw, ImageFont
 from invokeai.app.invocations.baseinvocation import (
     BaseInvocation,
     BaseInvocationOutput,
+    FieldDescriptions,
+    Input,
     InputField,
     InvocationContext,
     OutputField,
@@ -18,11 +20,11 @@ from invokeai.app.invocations.baseinvocation import (
     invocation,
     invocation_output,
 )
-from invokeai.app.invocations.image import (
-    PIL_RESAMPLING_MAP,
-    PIL_RESAMPLING_MODES,
-)
+from invokeai.app.invocations.image import PIL_RESAMPLING_MAP, PIL_RESAMPLING_MODES
+from invokeai.app.invocations.latent import SAMPLER_NAME_VALUES, SchedulerOutput
+from invokeai.app.invocations.metadata import CoreMetadata
 from invokeai.app.invocations.primitives import (
+    BoardField,
     ColorField,
     FloatOutput,
     ImageCollectionOutput,
@@ -31,14 +33,7 @@ from invokeai.app.invocations.primitives import (
     StringCollectionOutput,
     StringOutput,
 )
-from invokeai.app.models.image import (
-    ImageCategory,
-    ResourceOrigin,
-)
-from invokeai.app.invocations.latent import (
-    SAMPLER_NAME_VALUES,
-    SchedulerOutput,
-)
+from invokeai.app.models.image import ImageCategory, ResourceOrigin
 
 
 @invocation(
@@ -51,7 +46,10 @@ from invokeai.app.invocations.latent import (
 class FloatsToStringsInvocation(BaseInvocation):
     """FloatsToStrings converts a float or collections of floats to a collection of strings"""
 
-    floats: Union[float, list[float]] = InputField(default_factory=list, description="float or collection of floats")
+    floats: Union[float, list[float]] = InputField(
+        default_factory=list,
+        description="float or collection of floats",
+    )
 
     def invoke(self, context: InvocationContext) -> StringCollectionOutput:
         if self.floats is None:
@@ -71,7 +69,10 @@ class FloatsToStringsInvocation(BaseInvocation):
 class IntsToStringsInvocation(BaseInvocation):
     """IntsToStrings converts an int or collection of ints to a collection of strings"""
 
-    ints: Union[int, list[int]] = InputField(default_factory=list, description="int or collection of ints")
+    ints: Union[int, list[int]] = InputField(
+        default_factory=list,
+        description="int or collection of ints",
+    )
 
     def invoke(self, context: InvocationContext) -> StringCollectionOutput:
         if self.ints is None:
@@ -248,8 +249,14 @@ class XYImageCollectInvocation(BaseInvocation):
     version="1.0.0",
 )
 class XYImagesToGridInvocation(BaseInvocation):
-    """Load a collection of xyimage types (json of (x_item,y_item,image_name)array) and create a gridimage of them"""
+    """Load a collection of xyimage types (json of (x_item,y_item,image_name)array) and create a grid image of them"""
 
+    board: Optional[BoardField] = InputField(default=None, description=FieldDescriptions.board, input=Input.Direct)
+    metadata: CoreMetadata = InputField(
+        default=None,
+        description=FieldDescriptions.core_metadata,
+        ui_hidden=True,
+    )
     xyimages: list[str] = InputField(
         default_factory=list,
         description="The xyImage Collection",
@@ -391,9 +398,12 @@ class XYImagesToGridInvocation(BaseInvocation):
                     image=background,
                     image_origin=ResourceOrigin.INTERNAL,
                     image_category=ImageCategory.GENERAL,
+                    board_id=self.board.board_id if self.board else None,
                     node_id=self.id,
                     session_id=context.graph_execution_state_id,
                     is_intermediate=self.is_intermediate,
+                    metadata=self.metadata.dict() if self.metadata else None,
+                    workflow=self.workflow,
                 )
                 grid_images.append(ImageField(image_name=image_dto.image_name))
                 background = Image.new("RGBA", (background_width, background_height), self.background_color.tuple())
@@ -404,9 +414,12 @@ class XYImagesToGridInvocation(BaseInvocation):
                 image=background,
                 image_origin=ResourceOrigin.INTERNAL,
                 image_category=ImageCategory.GENERAL,
+                board_id=self.board.board_id if self.board else None,
                 node_id=self.id,
                 session_id=context.graph_execution_state_id,
                 is_intermediate=self.is_intermediate,
+                metadata=self.metadata.dict() if self.metadata else None,
+                workflow=self.workflow,
             )
             grid_images.append(ImageField(image_name=image_dto.image_name))
 
@@ -423,6 +436,12 @@ class XYImagesToGridInvocation(BaseInvocation):
 class ImagesToGridsInvocation(BaseInvocation):
     """Load a collection of images and create grid images from it and output a collection of generated grid images"""
 
+    board: Optional[BoardField] = InputField(default=None, description=FieldDescriptions.board, input=Input.Direct)
+    metadata: CoreMetadata = InputField(
+        default=None,
+        description=FieldDescriptions.core_metadata,
+        ui_hidden=True,
+    )
     images: list[ImageField] = InputField(
         default_factory=list,
         description="The image collection to turn into grids",
@@ -497,9 +516,12 @@ class ImagesToGridsInvocation(BaseInvocation):
                     image=background,
                     image_origin=ResourceOrigin.INTERNAL,
                     image_category=ImageCategory.GENERAL,
+                    board_id=self.board.board_id if self.board else None,
                     node_id=self.id,
                     session_id=context.graph_execution_state_id,
                     is_intermediate=self.is_intermediate,
+                    metadata=self.metadata.dict() if self.metadata else None,
+                    workflow=self.workflow,
                 )
                 grid_images.append(ImageField(image_name=image_dto.image_name))
                 background = Image.new("RGBA", (background_width, background_height), self.background_color.tuple())
@@ -510,9 +532,12 @@ class ImagesToGridsInvocation(BaseInvocation):
                 image=background,
                 image_origin=ResourceOrigin.INTERNAL,
                 image_category=ImageCategory.GENERAL,
+                board_id=self.board.board_id if self.board else None,
                 node_id=self.id,
                 session_id=context.graph_execution_state_id,
                 is_intermediate=self.is_intermediate,
+                metadata=self.metadata.dict() if self.metadata else None,
+                workflow=self.workflow,
             )
             grid_images.append(ImageField(image_name=image_dto.image_name))
 
