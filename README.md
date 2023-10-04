@@ -22,8 +22,6 @@ The discord link for discussion is :- [XYImage To Grid](https://discord.com/chan
 - When the Grids are added to the gallery it will not automatically update onscreen.
   - Either Refresh the browser.
   - Or add an iterate node and a show image node off the grid node.
-- Unable to embed workflow into grid images
-  - No workaround as yet you will have to embed is each of the individually generated images
 - The generation will crash and stop if an invalid scheduler is passed in
 
 ### TODO
@@ -50,6 +48,7 @@ Takes a collection of images and creates a grid(s) of images. If there are more 
 
 |Input|Description|
 |-|-|
+|`Board`| The board you want the image saved into.|
 |`Images`| This is the collection of images to add to the grids. It is used by collecting the images with a `Collect` node and feeding this into this input|
 |`Columns`| The number of images across in the grids|
 |`Rows`| The maximum rows per grid|
@@ -77,6 +76,7 @@ Converts a collection of `XYImages` into a labeled Grid of images.  The `XYImage
 
 |Input|Description|
 |-|-|
+|`Board`| The board you want the image saved into.|
 |`XY Images`|This is the collection of images and XY items to add to the grid. It is used by `XYImage Collect` node and a `Collect` node and feeding this into this input|
 |`Space`|The number of pixels gap between images|
 |`Scale Factor`|How much to resize the images by (values of 0...1 will reduce the image size, This is recommended if you have large images or large grids)|
