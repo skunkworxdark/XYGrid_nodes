@@ -49,19 +49,23 @@ class FloatsToStringsInvocation(BaseInvocation):
     floats: Union[float, list[float]] = InputField(
         default_factory=list,
         description="float or collection of floats",
+        input=Input.Connection,
+        ui_type=UIType.FloatCollection,
     )
 
     def invoke(self, context: InvocationContext) -> StringCollectionOutput:
         if self.floats is None:
             raise Exception("No float or collection of floats provided")
         return StringCollectionOutput(
-            collection=[str(x) for x in self.floats] if isinstance(self.floats, list) else [str(self.floats)]
+            collection=[str(x) for x in self.floats]
+            if isinstance(self.floats, list)
+            else [str(self.floats)]
         )
 
 
 @invocation(
     "ints_to_strings",
-    title="Ints To String",
+    title="Ints To Strings",
     tags=["int", "string"],
     category="util",
     version="1.0.0",
@@ -72,13 +76,17 @@ class IntsToStringsInvocation(BaseInvocation):
     ints: Union[int, list[int]] = InputField(
         default_factory=list,
         description="int or collection of ints",
+        input=Input.Connection,
+        ui_type=UIType.IntegerCollection,
     )
 
     def invoke(self, context: InvocationContext) -> StringCollectionOutput:
         if self.ints is None:
             raise Exception("No int or collection of ints provided")
         return StringCollectionOutput(
-            collection=[str(x) for x in self.ints] if isinstance(self.ints, list) else [str(self.ints)]
+            collection=[str(x) for x in self.ints]
+            if isinstance(self.ints, list)
+            else [str(self.ints)]
         )
 
 
@@ -141,7 +149,9 @@ class StringToSchedulerInvocation(BaseInvocation):
     """StringToScheduler converts a string to a scheduler"""
 
     # ddim,ddpm,deis,lms,lms_k,pndm,heun,heun_k,euler,euler_k,euler_a,kdpm_2,kdpm_2_a,dpmpp_2s,dpmpp_2s_k,dpmpp_2m,dpmpp_2m_k,dpmpp_2m_sde,dpmpp_2m_sde_k,dpmpp_sde,dpmpp_sde_k,unipc
-    scheduler_string: str = InputField(description="string containing a scheduler to convert")
+    scheduler_string: str = InputField(
+        description="string containing a scheduler to convert"
+    )
 
     def invoke(self, context: InvocationContext) -> SchedulerOutput:
         return SchedulerOutput(scheduler=self.scheduler_string.strip().lower())
@@ -164,8 +174,12 @@ class XYCollectOutput(BaseInvocationOutput):
 class XYCollectInvocation(BaseInvocation):
     """XYCollect takes an X and Y string collections and outputs a XY item collection with every combination of X and Y"""
 
-    x_collection: list[str] = InputField(default_factory=list, description="The X collection")
-    y_collection: list[str] = InputField(default_factory=list, description="The Y collection")
+    x_collection: list[str] = InputField(
+        default_factory=list, description="The X collection"
+    )
+    y_collection: list[str] = InputField(
+        default_factory=list, description="The Y collection"
+    )
 
     def invoke(self, context: InvocationContext) -> XYCollectOutput:
         combinations = list(product(self.x_collection, self.y_collection))
@@ -238,7 +252,9 @@ class XYImageCollectInvocation(BaseInvocation):
     image: ImageField = InputField(description="The image to turn into grids")
 
     def invoke(self, context: InvocationContext) -> StringOutput:
-        return StringOutput(value=json.dumps([self.y_item, self.x_item, self.image.image_name]))
+        return StringOutput(
+            value=json.dumps([self.y_item, self.x_item, self.image.image_name])
+        )
 
 
 @invocation(
@@ -251,7 +267,9 @@ class XYImageCollectInvocation(BaseInvocation):
 class XYImagesToGridInvocation(BaseInvocation):
     """Load a collection of xyimage types (json of (x_item,y_item,image_name)array) and create a grid image of them"""
 
-    board: Optional[BoardField] = InputField(default=None, description=FieldDescriptions.board, input=Input.Direct)
+    board: Optional[BoardField] = InputField(
+        default=None, description=FieldDescriptions.board, input=Input.Direct
+    )
     metadata: CoreMetadata = InputField(
         default=None,
         description=FieldDescriptions.core_metadata,
@@ -260,7 +278,6 @@ class XYImagesToGridInvocation(BaseInvocation):
     xyimages: list[str] = InputField(
         default_factory=list,
         description="The xyImage Collection",
-        ui_type=UIType.Collection,
     )
     space: int = InputField(
         default=1,
@@ -306,23 +323,23 @@ class XYImagesToGridInvocation(BaseInvocation):
         return all(re.match(pattern, item) for item in array)
 
     def sort_array(self, arr):
-        def sort_key(x):
-            key0 = float(x) if self.is_all_numeric(arr) else x[0]
-            return key0
-
-        return sorted(arr, key=sort_key)
+        return sorted(arr, key=float) if self.is_all_numeric(arr) else sorted(arr)
 
     def is_all_numeric2(self, array, i):
         pattern = r"^-?\d+(\.\d+)?$"
         return all(re.match(pattern, item[i]) for item in array)
 
     def sort_array2(self, arr):
-        def sort_key2(x):
-            key0 = float(x[0]) if self.is_all_numeric2(arr, 0) else x[0]
-            key1 = float(x[1]) if self.is_all_numeric2(arr, 1) else x[1]
-            return (key0, key1)
+        isNum0 = self.is_all_numeric2(arr, 0)
+        isNum1 = self.is_all_numeric2(arr, 1)
 
-        return sorted(arr, key=sort_key2)
+        return sorted(
+            arr,
+            key=lambda x: (
+                (float(x[0]) if isNum0 else x[0]),
+                (float(x[1]) if isNum1 else x[1]),
+            ),
+        )
 
     def invoke(self, context: InvocationContext) -> ImageCollectionOutput:
         """Convert an image list into a grids of images"""
@@ -333,28 +350,39 @@ class XYImagesToGridInvocation(BaseInvocation):
 
         new_array = [json.loads(s) for s in self.xyimages]
         sorted_array = self.sort_array2(new_array)
-        images = [context.services.images.get_pil_image(item[2]) for item in sorted_array]
+        images = [
+            context.services.images.get_pil_image(item[2]) for item in sorted_array
+        ]
         row_names = self.sort_array(set([item[0] for item in sorted_array]))
         rows = len(row_names)
         column_names = self.sort_array(set([item[1] for item in sorted_array]))
         columns = len(column_names)
         width_max = int(max([image.width for image in images]) * self.scale_factor)
         height_max = int(max([image.height for image in images]) * self.scale_factor)
-        background_width = width_max * columns + (self.space * (columns - 1)) + left_label_space
-        background_height = height_max * rows + (self.space * (rows - 1)) + top_label_space
+        background_width = (
+            width_max * columns + (self.space * (columns - 1)) + left_label_space
+        )
+        background_height = (
+            height_max * rows + (self.space * (rows - 1)) + top_label_space
+        )
         resample_mode = PIL_RESAMPLING_MAP[self.resample_mode]
 
         column = 0
         row = 0
         x_offset = left_label_space
         y_offset = top_label_space
-        background = Image.new("RGBA", (background_width, background_height), self.background_color.tuple())
+        background = Image.new(
+            "RGBA", (background_width, background_height), self.background_color.tuple()
+        )
         grid_images = []
 
         for image in images:
             if not self.scale_factor == 1.0:
                 image = image.resize(
-                    (int(image.width * self.scale_factor), int(image.width * self.scale_factor)),
+                    (
+                        int(image.width * self.scale_factor),
+                        int(image.width * self.scale_factor),
+                    ),
                     resample=resample_mode,
                 )
 
@@ -378,7 +406,10 @@ class XYImagesToGridInvocation(BaseInvocation):
                 labely = 0
                 for label in column_names:
                     text_bbox = font.getbbox(label)
-                    text_width, text_height = text_bbox[2] - text_bbox[0], text_bbox[3] - text_bbox[0]
+                    text_width, text_height = (
+                        text_bbox[2] - text_bbox[0],
+                        text_bbox[3] - text_bbox[0],
+                    )
                     text_x = labelx + (width_max - text_width) // 2
                     text_y = labely + (top_label_space - text_height) // 2
                     draw.text((text_x, text_y), label, fill=text_color, font=font)
@@ -388,7 +419,10 @@ class XYImagesToGridInvocation(BaseInvocation):
                 labely = top_label_space
                 for label in row_names:
                     text_bbox = font.getbbox(label)
-                    text_width, text_height = text_bbox[2] - text_bbox[0], text_bbox[3] - text_bbox[0]
+                    text_width, text_height = (
+                        text_bbox[2] - text_bbox[0],
+                        text_bbox[3] - text_bbox[0],
+                    )
                     text_x = labelx + (left_label_space - text_width) // 2
                     text_y = labely + (height_max - text_height) // 2
                     draw.text((text_x, text_y), label, fill=text_color, font=font)
@@ -406,7 +440,11 @@ class XYImagesToGridInvocation(BaseInvocation):
                     workflow=self.workflow,
                 )
                 grid_images.append(ImageField(image_name=image_dto.image_name))
-                background = Image.new("RGBA", (background_width, background_height), self.background_color.tuple())
+                background = Image.new(
+                    "RGBA",
+                    (background_width, background_height),
+                    self.background_color.tuple(),
+                )
 
         # if we are not on column and row 0 then we have a part done grid and need to save it
         if column > 0 and row > 0:
@@ -436,7 +474,9 @@ class XYImagesToGridInvocation(BaseInvocation):
 class ImagesToGridsInvocation(BaseInvocation):
     """Load a collection of images and create grid images from it and output a collection of generated grid images"""
 
-    board: Optional[BoardField] = InputField(default=None, description=FieldDescriptions.board, input=Input.Direct)
+    board: Optional[BoardField] = InputField(
+        default=None, description=FieldDescriptions.board, input=Input.Direct
+    )
     metadata: CoreMetadata = InputField(
         default=None,
         description=FieldDescriptions.core_metadata,
@@ -478,7 +518,10 @@ class ImagesToGridsInvocation(BaseInvocation):
 
     def invoke(self, context: InvocationContext) -> ImageCollectionOutput:
         """Convert an image list into a grids of images"""
-        images = [context.services.images.get_pil_image(image.image_name) for image in self.images]
+        images = [
+            context.services.images.get_pil_image(image.image_name)
+            for image in self.images
+        ]
         width_max = int(max([image.width for image in images]) * self.scale_factor)
         height_max = int(max([image.height for image in images]) * self.scale_factor)
         background_width = width_max * self.columns + (self.space * (self.columns - 1))
@@ -489,13 +532,18 @@ class ImagesToGridsInvocation(BaseInvocation):
         row = 0
         x_offset = 0
         y_offset = 0
-        background = Image.new("RGBA", (background_width, background_height), self.background_color.tuple())
+        background = Image.new(
+            "RGBA", (background_width, background_height), self.background_color.tuple()
+        )
         grid_images = []
 
         for image in images:
             if not self.scale_factor == 1.0:
                 image = image.resize(
-                    (int(image.width * self.scale_factor), int(image.width * self.scale_factor)),
+                    (
+                        int(image.width * self.scale_factor),
+                        int(image.width * self.scale_factor),
+                    ),
                     resample=resample_mode,
                 )
 
@@ -524,7 +572,11 @@ class ImagesToGridsInvocation(BaseInvocation):
                     workflow=self.workflow,
                 )
                 grid_images.append(ImageField(image_name=image_dto.image_name))
-                background = Image.new("RGBA", (background_width, background_height), self.background_color.tuple())
+                background = Image.new(
+                    "RGBA",
+                    (background_width, background_height),
+                    self.background_color.tuple(),
+                )
 
         # if we are not on column and row 0 then we have a part done grid and need to save it
         if column > 0 or row > 0:
