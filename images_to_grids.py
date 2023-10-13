@@ -33,7 +33,7 @@ from invokeai.app.invocations.primitives import (
     StringCollectionOutput,
     StringOutput,
 )
-from invokeai.app.models.image import ImageCategory, ResourceOrigin
+from invokeai.app.services.image_records.image_records_common import ImageCategory, ResourceOrigin
 
 
 @invocation(
