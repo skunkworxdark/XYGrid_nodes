@@ -11,7 +11,7 @@ These nodes can do the following things.
 ![CollageExamples](images/collage.png)
 ## Usage
 <ins>Install:</ins><BR>
-Their are two options for installing these nodes. 
+Their are two options for installing these nodes. (Option 1 is the recomended option) 
 1. Git clone the repo into the `invokeai/nodes` directory. (**Recommended** - as it allows updating via a git pull)
     - open a command prompt/terminal in the invokeAI nodes directory ( or choose `8. Open the developer console` option from the invoke.bat then `cd nodes`)
     - run `git clone https://github.com/skunkworxdark/XYGrid_nodes.git`
