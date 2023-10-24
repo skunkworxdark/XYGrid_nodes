@@ -15,7 +15,7 @@ Their are two options for installing these nodes. (Option 1 is the recomended op
 1. Git clone the repo into the `invokeai/nodes` directory. (**Recommended** - as it allows updating via a git pull)
     - open a command prompt/terminal in the invokeAI nodes directory ( or choose `8. Open the developer console` option from the invoke.bat then `cd nodes`)
     - run `git clone https://github.com/skunkworxdark/XYGrid_nodes.git`
-2. Manually download and place [images_to_grids.py](images_to_grids.py) in a sub folder in the `invokeai/nodes` folder.
+2. Manually download and place [prompt_tools.py](prompt_tools.py) & [__init__.py](__init__.py) in a sub folder in the `invokeai/nodes` folder.
 
 Important Note: If you have used a previous version of these nodes (Pre Invoke 3.4) that where installed in the .env invocations directory. Then the existing images_to_grids.py file must be deleted from the invocations directory otherwise invoke will throw an error with duplicate nodes. Also note that some of these nodes have changed names and parameters so existing workflows will need to be remade. See included workflows for examples.
 
