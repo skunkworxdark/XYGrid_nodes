@@ -5,10 +5,10 @@ Discord link :- [XYImage To Grid](https://discord.com/channels/10201235590639903
 ## Overview
 
 These nodes add the following to InvokeAI:
-- Generate grids of images from multiple input images.  
-- Create XY grid images with labels from parameters.
-- Split images into overlapping tiles for processing. (Embiggen/Super Resolution workflow)
-- Recombine image tiles into a single output image blending the seams between the image tiles. 
+- Generate grids of images from multiple input images
+- Create XY grid images with labels from parameters
+- Split images into overlapping tiles for processing (for super resolution workflows)
+- Recombine image tiles into a single output image blending the seams 
 
 The nodes include:
 - [Images To Grids](#images-to-grids-node)  
@@ -27,21 +27,21 @@ There are two options to install the nodes:
 
 1. **Recommended**: Git clone the repo into the `invokeai/nodes` directory. This allows updating via `git pull`.
 
-    - Open a command prompt/terminal in the invokeAI nodes folder and run:
+    - In the InvokeAI nodes folder, run:
 
         ```
         git clone https://github.com/skunkworxdark/XYGrid_nodes.git
         ```
 
-2. Manually download [images_to_grids.py](images_to_grids.py) & [__init__.py](__init__.py) then place them a subfolder under `invokeai/nodes/SomeSubFolder`.  
+2. Manually download [images_to_grids.py](images_to_grids.py) & [__init__.py](__init__.py) then place them a subfolder under `invokeai/nodes`.  
 
-**Important:** If you used a previous version of these nodes installed in `.env`, delete the old `images_to_grids.py` file to avoid errors. Also some of these nodes have changed names and parameters so existing workflows will need to be re-made. See included workflows for examples.
+**Important:** If you have a previous version of these nodes installed in `.env`, delete the old `images_to_grids.py` to avoid errors. Existing workflows may need updating due to node name and parameter changes. See included workflows for examples.
 
 ### Update
 
 Run a `git pull` from the `XYGrid_nodes` folder.
 
-Or run the `update.bat` or `update.sh` script.
+Or run `update.bat` or `update.sh`.
 
 For manual installs, download and replace the files.
 
@@ -51,20 +51,19 @@ Delete the `XYGrid_nodes` folder. Or rename to `_XYGrid_nodes` so InvokeAI will 
 
 
 ## Known issues
-- When the `Images To Grids` nodes adds its output images to a board the board will not automatically update onscreen.
-  - Either Refresh the browser.
-  - Or force the board to load more items.
-  - Or add an iterate node and a show or save image node off image collection output of the Images To Grid node.
-- The generation will stop if an invalid scheduler name is passed in.
+- `Images To Grids` output images don't automatically appear onscreen in the board.
+  - Refresh the browser or force the board to load more images.
+  - Or add iterate and show/save image nodes to the output of the `Images To Grids` node.
+- Image generation will stop will stop with an invalid scheduler name.
 
 ## TODO
-- `Images To Grids` nodes output images don't automatically appear on screen in the board without workarounds
+- Fix `Images To Grids` node output not automatically appear on screen in the board without workarounds
 - Add other type to string and string to type conversions for other parameters e.g.  Model, Lora, images etc..
-- A useable way to select multiple things from a list (some kind of checkbox selection) to enable selecting things from lists like models and loras etc
+- Create a useable way to select multiple things from a list (some kind of checkbox selection) to enable selecting things from lists like models and loras etc
 - A node that can calculate the ideal X and Y tile sizes based upon the input image ans scale value.
 
 ## Example workflows
-The example workflows can be found in the [workflows](workflows) folder.
+Example workflows are in the [workflows](workflows) folder.
 
 - [i2g_rndRange_wf.json](workflows/i2g_rndRange_wf.json) : Basic Images to Grids workflow using a Random Range
 - [xygrid_csv-prompt-cfg_wf.json](workflows/xygrid_csv-prompt-cfg_wf.json) : XY Grid workflow example using Prompt joining and CFG Scale via CSV values
@@ -77,7 +76,7 @@ The example workflows can be found in the [workflows](workflows) folder.
 
 ## Main Nodes  
 ### `Images To Grids` node
-Creates image grids from a collection of input images. If more images than fit in one grid then multiple grids will be created.
+Creates image grids from a collection of input images. Multiple image grids created if more images than fit in one.
 <details><summary>Details</summary>
 <details><summary>Workflow Example</summary>
 
@@ -100,19 +99,19 @@ Grid-2:
 
 <details><summary>Inputs</summary>
 
-- `Board`: Board to save images to. 
-- `Images`: Collection of input images.
-- `Columns`: Images per row.   
-- `Rows`: Max rows per grid. 
-- `Space`: Space between images.
-- `Scale Factor`: Resize amount.
-- `Resample Mode`: Resize method. 
-- `Background Color`: Grid background color.
+- `Board`: Board to save images
+- `Images`: Input images
+- `Columns`: Images per row
+- `Rows`: Rows per grid
+- `Space`: Space between images
+- `Scale Factor`: Resize amount
+- `Resample Mode`: Resize method
+- `Background Color`: Grid background color
 </details>
 </details>
 
 ### `XYImages To Grids` node
-Converts `XYImages` collection into a labeled image grid.  The `XYImages` collection has to be built using the XY Grid supporting nodes. See workflow examples for more details.
+Converts `XYImage Item` collection into a labeled image grid.  The `XYImage Image` collection are built using the supporting nodes.
 <details><summary>Details</summary>
 <details><summary>Workflow Examples</summary>
 
@@ -147,43 +146,43 @@ xygrid_range-step-cfg_example<br>
 
 <details><summary>Inputs</summary>
 
-- `Board`: Board to save to.  
-- `XYImages`: `XYImage` collection. Created by `XYImage Collect` node fed into a `Collect` node
-- `Scale Factor`: Image resize amount.
-- `Resample Mode`: Resize method.
-- `Left Label Width`: Label column width.  
-- `Label Font Size`: Font size for labels.
+- `Board`: Board to save
+- `XYImages`: `XYImage Item` collection. Created by `XYImage Collect` node fed into a `Collect` node
+- `Scale Factor`: Image resize amount
+- `Resample Mode`: Resize method
+- `Left Label Width`: Label column width
+- `Label Font Size`: Label font size
 </details>
 </details>
 
 ### `XYImage Tiles` nodes
 
-These nodes are designed to work together as a pair in a workflow. They allow you to split an image into tiles, process them, and recombine them into an image. The nodes are:
+These nodes are designed to work together as a pair in a workflow. They allow you to split an image into tiles, process them, and then recombine them into an image. The nodes are:
 
-- `Image To XYImage Tiles` : This node cuts an input image into tiles of a specified size and overlap.
-- `XYImage Tiles To Image` : This node merges the tiles back into a single image, blending the overlapping areas.
+- `Image To XYImage Tiles` : Cuts input image into overlapping tiles of a specified size and overlap.
+- `XYImage Tiles To Image` : Merges tiles into a single image, blending the overlapping areas.
 
-These nodes are not very intuitive to use, so I recommend that you check out the example workflow and experiment with it.
+These nodes are not very intuitive to use, so I recommend checking out the example workflow and experimenting with it.
 
 <details><summary>Details</summary>
 <BR>
-The advantage of these nodes is that they enable you to work with larger images than usual by dividing them into smaller pieces, applying transformations, and stitching them back together. The nodes can also create overlapping tiles to ensure consistency and smoothness between the tiles, and then blend them when reconstructing the image.
+The advantage of these nodes is that they enable you to work with larger images than usual by dividing them into smaller tiles, applying transformations, and stitching them back together. The nodes can also create overlapping tiles to ensure consistency and smoothness between the tiles, and then blend them when reconstructing the image.
 <BR><BR>
 
-The best use case I have found for these nodes is to create a super-resolution effect, similar to Invoke's old Embiggen or Automatic1111's Super Resolution. This is done by feeding the tiles into the Tile controlnet to regenerate each tile at a higher resolution, and then recombining them into a much larger image. You can also try other image control methods, but the Tile controlnet seems to produce the most consistent results. You can also use no prompts at all and still get an OK image, but matching the input image's original generation settings will probably give better results.<BR>
+The best use case is to create a super-resolution effect, similar to Invoke's old Embiggen or Automatic1111's Super Resolution. This is done by a Tile controlnet to regenerate each tile at a higher resolution, and then recombining them into a much larger image. You can also try other image control methods, but the Tile controlnet seems to produce the most consistent results. You can also use no prompts at all and still get an OK image, but using the input image's original generation settings and prompts will give more consistent results.<BR>
 
 ### `Image To XYImage Tiles`
 This takes an input image and cuts it up into smaller tiles.<BR>
 
 For quick and easy results, you can use the following inputs:
 
-- Tile X and Tile Y: These are the sizes that the tile will be reprocessed at. For SD1.5, you can use 512, and for SDXL, you can use 1024, as these are the ideal generation sizes.
-- Overlap: This is the amount of pixels that each tile will overlap with its neighbors. A good value is 32.
-- Scale: This is the factor by which the input image will be enlarged. You can use 2, 4, or 8. Higher is not recomended as the tile become to small.
+- Tile X/Y: Generation sizes (512 for SD1.5, 1024 for SDXL
+- Overlap: 32
+- Scale: 2, 4, 8 (higher not recommended)
 
 The way the input image is cut up is a bit complicated, but there is a logic behind it. Here is how it works:
 
-- The Tile X, Tile Y, and Overlap values are scaled down by the Scale factor. These are used to cut up the image.
+- The Tile X, Tile Y, and Overlap values are scaled down by the Scale factor. These are used to cut up the input image.
 - The first tile starts at the top-left corner of the image and has the size of the scaled down Tile X and Y values.
 - The next tile starts (scaled down Overlap value) pixels before the end of the previous one on the X axis. This is repeated until there is not enough space for another tile.
 - If the tiles don't divide perfectly into the source image then a final tile is created starting at the right edge of the image. This means that sometimes the last tile and row of tiles can have a large overlap unless you choose an ideal tile size.
@@ -191,15 +190,15 @@ The way the input image is cut up is a bit complicated, but there is a logic beh
 - All the tiles are packaged into an XYImage Item collection, with their X and Y parameters being their coordinates on the final enlarged image. 
 
 Choosing an ideal tile size:
-The Overlap value is included in the tile size, so if you want to minimize the number of tiles and maximize their efficiency, you need to account for that. As a rule of thumb choose the largerst tile size that your GPU can generate that also is exactly divisable into the source image when csalled down and the overlap is taken into account. 
-Some examples:
+The overlap value is included in the tile size, so if you want to minimize the number of tiles needed, you need to account for that. As a rule of thumb choose the largest tile size that your GPU can generate that also is exactly divisible into the source image when scaled down and the overlap is taken into account. 
+Examples:
 - Scaling a 512 x 512 image by 2x with an Overlap of 32, use a tile size of 528 = 512 + 16 (half of the Overlap), this will give exactly 2 tiles across and 2 tiles down with a 32 pixel overlap in the middle.
 - Scaling a 512 x 512 image by 4x with an Overlap of 32, use a tile size of 1040 = 1024 + 16 (half of the Overlap), this will give exactly 2 tiles across and 2 tiles down with a 32 pixel overlap in the middle. Because we are using the tile controlnet generations sizes above 512 will still give good results but experimentation is needed.
 - Scaling a 1024 x 1024 image by 2x with an Overlap of 32, use a tile size of 1040 = 512 + 16 (half of the Overlap), this will give exactly 2 tiles across and 2 tiles down with a 32 pixel overlap in the middle.
 - Scaling a 768 x 768 image by 2x with an Overlap of 32, use a tile size of 528 = 512 + 16 (half of the Overlap), this will give exactly 3 tiles across and 3 tiles down with a 32 pixel overlap in the middle.
 
 ### `XYImage Tiles To Image` 
-This takes an `XYImage Item` collection as output from `XYImage Collect` -> `Collect` nodes and recombines them blending the overlap areas and producing a single image. The result is a smooth and seamless image that preserves the details of each tile.<BR>
+This takes an `XYImage Tile Item` collection as output from `XYImage Collect` -> `Collect` nodes and recombines them blending the overlap areas and producing a single image. The result is a smooth and seamless image that preserves the details of each tile. It uses the X & Y parameters as coordinates to reconstruct the image.<BR>
 
 <details><summary>Workflow Example</summary>
 
@@ -209,10 +208,10 @@ This takes an `XYImage Item` collection as output from `XYImage Collect` -> `Col
 
 <details><summary>Output Example</summary>
 
-input image:
+Input:
 ![xyimage_tile-input](images/xyimage_tile-input.png)
 
-2X output image:
+2X Output:
 ![xyimage_tile-output](images/xyimage_tile-output.png)
 </details>
 
@@ -247,7 +246,7 @@ input image:
 ### `Image To XYImages` node
 This is probably not very useful node to most people. I created it for testing purposes while creating the Tile resize workflow. However I have included it because someone might find a use for it.<BR>
 
-I basically takes an image and cuts it up into a number of columns and rows. Then outputs a `XYImage Item` collection.  The X & Y items contain the X & Y coordinates of where it was cut from the input image.<BR>
+It takes an image and cuts it up into a number of columns and rows. Then outputs a `XYImage Item` collection.  The X & Y items contain the X & Y coordinates of where it was cut from the input image.<BR>
 
 It is the less useful baby brother of the `Image To XYImage Tiles` node. It doesn't do overlapping regions or scaling. If you wish to scale the images then the X & Y value will also have to be scaled before they can be recombined. I put together an example simple scaling workflow that really isn't that useful but does demonstrate how it might be used.
 
@@ -304,7 +303,7 @@ These nodes provide a way of extracting the X and Y data from `XY` & `XYImage` c
 |Node|Description|
 |-|-|
 |`XY Expand`|Extracts X & Y strings from an `XY Item` output of the `XY Product` -> `iterate` node.<BR> The X & Y outputs can be passed to the X & Y inputs of the `XYImage Collect` node and used as the labels for the `XYImage To Grid` node.<BR> The X & Y outputs can be used directly into nodes inputs that accept strings e.g. Prompt, String Join etc.... However before been used as input to other nodes they will need to be converted into the correct type. This can be done with the `String To Float` and `String To Int` nodes|
-|`XYImage Expand`|This is used as part of an `XY Image Tile` workflow. It extracts the X, Y and ImageTile from an `XYImage Item` output of the `Image To XYImage Tile` -> `iterate` node.<BR>  The X & Y outputs **MUST** be passed to X& Y inputs of the `XYImage Collect` node as is to ensure the recombination works.<BR> The Image output is used with a `Tile` controlnet (or similar method) to generate a new up-scaled Image Tile. These are then also passed into the `XYImage Collect` node and then finally onto the `XYImage Tile To Image` node.|
+|`XYImage Expand`|This is used as part of an `XY Image Tile` workflow. It extracts the X, Y & Image tile from an `XYImage Item` output of the `Image To XYImage Tile` -> `iterate` node.<BR>  The X & Y outputs **MUST** be passed to X & Y inputs of the `XYImage Collect` node as is to ensure the recombination works.<BR> The Image output is used with a `Tile` controlnet (or similar method) to generate a new up-scaled Image Tile. These are then also passed into the `XYImage Collect` node and then finally onto the `XYImage Tile To Image` node.|
 |`String To Float`|Converts a string to a float. This is needed to convert the output of the `XY Expand` node before it can be used as input by nodes that accept the float data type e.g. CFG, Denoise start/end etc...|
 |`String To Int`|Converts a string to an integer. This is needed to convert the output of the `XY Expand` node before it can be used as input by nodes that accept the integer data type e.g. Step, Width, Height etc....|
 |`String To Scheduler`|Converts a string to a scheduler. This is needed to convert the output of the `XY Expand` node before it can be used as input by nodes that accept the scheduler data type.  Scheduler has to be provided as a string via a `CSV` and `string` based node in the internal name format.<BR> At the time of writing this can only be from the following values (ddim, ddpm, deis, lms, lms_k, pndm, heun, heun_k, euler, euler_k, euler_a, kdpm_2, kdpm_2_a, dpmpp_2s, dpmpp_2s_k, dpmpp_2m, dpmpp_2m_k, dpmpp_2m_sde, dpmpp_2m_sde_k, dpmpp_sde, dpmpp_sde_k, unipc) if in the future these are added to then the list can be found in the core schedulers.py file|
