@@ -7,7 +7,7 @@ Discord link :- [XYImage To Grid](https://discord.com/channels/10201235590639903
 These nodes add the following to InvokeAI:
 - Generate grids of images from multiple input images.  
 - Create XY grid images with labels from parameters.
-- Split images into overlapping tiles for processing. (Embiggen/Super Resolution workflow is the best use case so far)
+- Split images into overlapping tiles for processing. (Embiggen/Super Resolution workflow)
 - Recombine image tiles into a single output image blending the seams between the image tiles. 
 
 The nodes include:
@@ -71,8 +71,8 @@ The example workflows can be found in the [workflows](workflows) folder.
 - [xygrid_csv-step-cfg_wf.json](workflows/xygrid_csv-step-cfg_wf.json) : XY Grid workflow example using Step and CFG Scale via CSV values
 - [xygrid_csv-step-scheduler_wf.json](workflows/xygrid_csv-step-scheduler_wf.json) : XY Grid workflow example using Step and Scheduler CSV values
 - [xygrid_range-step-cfg_wf.json](workflows/xygrid_range-step-cfg_wf.json) : XY Grid workflow example using Step and CFG Scale via Integer and Float ranges
-- [xyimage_tile_wf.json](images\xyimage_tile_wf.json) : XYImage Tile scaling (Embiggen/Super Resolution) workflow
-- [i2xyi_scale_wf.json](workflows\i2xyi_scale_wf.json) : Image To XYImage basic workflow
+- [xyimage_tile_wf.json](images/xyimage_tile_wf.json) : XYImage Tile scaling (Embiggen/Super Resolution) workflow
+- [i2xyi_scale_wf.json](workflows/i2xyi_scale_wf.json) : Image To XYImage basic workflow
 
 
 ## Main Nodes  
@@ -117,7 +117,7 @@ Converts `XYImages` collection into a labeled image grid.  The `XYImages` collec
 <details><summary>Workflow Examples</summary>
 
 [xygrid_csv-prompt-cfg_wf.json](workflows/xygrid_csv-prompt-cfg_wf.json)
-![xygrid_csv-prompt-cfg_wf](images\xygrid_csv-prompt-cfg_wf.png)
+![xygrid_csv-prompt-cfg_wf](images/xygrid_csv-prompt-cfg_wf.png)
 
 [xygrid_csv-step-cfg_wf.json](workflows/xygrid_csv-step-cfg_wf.json)
 ![xygrid_csv-step-cfg_wf](images/xygrid_csv-step-cfg_wf.png)
@@ -203,8 +203,8 @@ This takes an `XYImage Item` collection as output from `XYImage Collect` -> `Col
 
 <details><summary>Workflow Example</summary>
 
-[xyimage_tile_wf.json](images\xyimage_tile_wf.json)
-![xyimage_tile_wf](images\xyimage_tile_wf.png)
+[xyimage_tile_wf.json](images/xyimage_tile_wf.json)
+![xyimage_tile_wf](images/xyimage_tile_wf.png)
 </details>
 
 <details><summary>Output Example</summary>
@@ -254,8 +254,8 @@ It is the less useful baby brother of the `Image To XYImage Tiles` node. It does
 <details><summary>Details</summary>
 <details><summary>Workflow Examples</summary>
 
-[i2xyi_scale_wf.json](workflows\i2xyi_scale_wf.json)
-![i2xyi_scale_wf](images\i2xyi_scale_wf.png)</details>
+[i2xyi_scale_wf.json](workflows/i2xyi_scale_wf.json)
+![i2xyi_scale_wf](images/i2xyi_scale_wf.png)</details>
 
 <details><summary>Output Example</summary>
 
