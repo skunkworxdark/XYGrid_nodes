@@ -6,9 +6,10 @@ import re
 import textwrap
 from itertools import product
 from pathlib import Path
-from typing import Optional, Union
+from typing import Literal, Optional, Union
 
-from PIL import Image, ImageDraw, ImageFont
+import numpy as np
+from PIL import Image, ImageDraw, ImageFilter, ImageFont, ImageOps
 
 import invokeai.assets.fonts as font_assets
 from invokeai.app.invocations.baseinvocation import (
@@ -27,7 +28,7 @@ from invokeai.app.invocations.baseinvocation import (
     invocation_output,
 )
 from invokeai.app.invocations.image import PIL_RESAMPLING_MAP, PIL_RESAMPLING_MODES
-from invokeai.app.invocations.latent import SAMPLER_NAME_VALUES, SchedulerOutput
+from invokeai.app.invocations.latent import SchedulerOutput
 from invokeai.app.invocations.primitives import (
     BoardField,
     ColorField,
@@ -36,10 +37,15 @@ from invokeai.app.invocations.primitives import (
     ImageField,
     ImageOutput,
     IntegerOutput,
+    LatentsField,
+    LatentsOutput,
     StringCollectionOutput,
     StringOutput,
+    build_latents_output,
 )
 from invokeai.app.services.image_records.image_records_common import ImageCategory, ResourceOrigin
+
+_downsampling_factor = 8
 
 
 def is_all_numeric(array):
@@ -67,6 +73,86 @@ def sort_array2(array):
             (float(x[0]) if isNum0 else x[0]),
         ),
     )
+
+
+def shift(arr, num, fill_value=255.0):
+    result = np.full_like(arr, fill_value)
+    if num > 0:
+        result[num:] = arr[:-num]
+    elif num < 0:
+        result[:num] = arr[-num:]
+    else:
+        result[:] = arr
+    return result
+
+
+def get_seam_line(i1: Image, i2: Image, rotate: bool, gutter: int) -> Image:
+    ia1 = np.array(i1.convert("RGB")) / 255.0
+    if i1.mode != "L":
+        # ia1 = np.sum(ia1, -1) / 3.0
+        ia1 = np.dot(ia1, [0.2989, 0.5870, 0.1140])
+
+    ia2 = np.array(i2.convert("RGB")) / 255.0
+    if i2.mode != "L":
+        # ia2 = np.sum(ia2, -1) / 3.0
+        ia2 = np.dot(ia2, [0.2989, 0.5870, 0.1140])
+
+    ia = ia2 - ia1
+
+    if rotate:
+        ia = np.rot90(ia, 1)
+
+    # array is y by x
+    max_y, max_x = ia.shape
+    max_x -= gutter
+    min_x = gutter
+
+    # print("SHAPE:")
+    # print(ia.shape)
+
+    energy = np.abs(np.gradient(ia, axis=0)) + np.abs(np.gradient(ia, axis=1))
+
+    res = np.copy(energy)
+
+    for y in range(1, max_y):
+        row = res[y, :]
+        rowl = shift(row, -1)
+        rowr = shift(row, 1)
+        res[y, :] = res[y - 1, :] + np.min([row, rowl, rowr], axis=0)
+
+    # create an array max_y long
+    lowest_energy_line = np.empty([max_y], dtype="uint16")
+    lowest_energy_line[max_y - 1] = np.argmin(res[max_y - 1, min_x : max_x - 1])
+
+    for ypos in range(max_y - 2, -1, -1):
+        lowest_pos = lowest_energy_line[ypos + 1]
+        lpos = lowest_pos - 1
+        rpos = lowest_pos + 1
+        lpos = np.clip(lpos, min_x, max_x - 1)
+        rpos = np.clip(rpos, min_x, max_x - 1)
+        lowest_energy_line[ypos] = np.argmin(energy[ypos, lpos : rpos + 1]) + lpos
+
+    mask = np.zeros_like(ia)
+
+    for ypos in range(0, max_y):
+        to_fill = lowest_energy_line[ypos]
+        mask[ypos, 0:to_fill] = 1
+
+    if rotate:
+        mask = np.rot90(mask, 3)
+
+    image = Image.fromarray((mask * 255.0).astype("uint8"))
+
+    return image
+
+
+def seam_mask(i1: Image, i2: Image, rotate: bool, blur_size: int) -> Image:
+    seam = get_seam_line(i1, i2, rotate, blur_size + 1)
+    #    blur = ImageFilter.GaussianBlur(float(blur_size))
+    blur = ImageFilter.BoxBlur(float(blur_size))
+    mask = seam.filter(blur)
+    mask = ImageOps.invert(mask)
+    return mask
 
 
 @invocation(
@@ -346,8 +432,8 @@ class XYImagesToGridInvocation(BaseInvocation, WithWorkflow, WithMetadata):
         new_array = [json.loads(s) for s in self.xyimages]
         sorted_array = sort_array2(new_array)
         images = [context.services.images.get_pil_image(item[2]) for item in sorted_array]
-        x_labels = sort_array(set([item[0] for item in sorted_array]))
-        y_labels = sort_array(set([item[1] for item in sorted_array]))
+        x_labels = sort_array({item[0] for item in sorted_array})
+        y_labels = sort_array({item[1] for item in sorted_array})
         columns = len(x_labels)
         rows = len(y_labels)
         column_width = int(max([image.width for image in images]) * self.scale_factor)
@@ -399,13 +485,21 @@ class XYImagesToGridInvocation(BaseInvocation, WithWorkflow, WithMetadata):
                 if iy == 0:
                     w, h = draw.multiline_textbbox((0, 0), "\n".join(x_labels_wrapped[ix]), font=font)[2:4]
                     draw.text(
-                        (x + ((column_width - w) / 2), 0), "\n".join(x_labels_wrapped[ix]), fill="black", font=font
+                        (x + ((column_width - w) / 2), 0),
+                        "\n".join(x_labels_wrapped[ix]),
+                        fill="black",
+                        font=font,
                     )
 
                 # Add y label on the first column
                 if ix == 0:
                     w, h = draw.multiline_textbbox((0, 0), "\n".join(y_labels_wrapped[iy]), font=font)[2:4]
-                    draw.text((((left_label_width - w) / 2), y + ((row_height - h) / 2)), "\n".join(y_labels_wrapped[iy]), fill="black", font=font)
+                    draw.text(
+                        (((left_label_width - w) / 2), y + ((row_height - h) / 2)),
+                        "\n".join(y_labels_wrapped[iy]),
+                        fill="black",
+                        font=font,
+                    )
 
                 x += column_width
             y += row_height
@@ -600,7 +694,6 @@ class ImageToXYImageTilesOutput(BaseInvocationOutput):
     tile_x: int = OutputField(description="The tile x dimension")
     tile_y: int = OutputField(description="The tile y dimension")
     overlap: int = OutputField(description="The tile overlap size")
-    scale: int = OutputField(description="The the scaling amount")
 
 
 @invocation(
@@ -608,51 +701,74 @@ class ImageToXYImageTilesOutput(BaseInvocationOutput):
     title="Image To XYImage Tiles",
     tags=["xy", "tile", "image"],
     category="tile",
-    version="1.0.0",
+    version="1.1.0",
 )
-class ImageToXYImageTilesInvocation(BaseInvocation, WithWorkflow, WithMetadata):
+class ImageToXYImageTilesInvocation(BaseInvocation, WithWorkflow):
     """Cuts an image up into overlapping tiles and outputs as an XYImage Collection (x,y is the final position of the tile)"""
 
     # Inputs
     image: ImageField = InputField(description="The input image")
-    tile_x: int = InputField(default=512, ge=1, description="x resolution of generation tile")
-    tile_y: int = InputField(default=512, ge=1, description="y resolution of generation tile")
-    overlap: int = InputField(default=64, ge=0, description="tile overlap size")
-    scale: int = InputField(default=2, ge=2, le=256, description="How much to scale to output")
+    tile_x: int = InputField(
+        default=576,
+        ge=1,
+        multiple_of=_downsampling_factor,
+        description="x resolution of generation tile (must be a multiple of 8)",
+    )
+    tile_y: int = InputField(
+        default=576,
+        ge=1,
+        multiple_of=_downsampling_factor,
+        description="y resolution of generation tile (must be a multiple of 8)",
+    )
+    overlap: int = InputField(
+        default=128,
+        ge=0,
+        multiple_of=_downsampling_factor * 2,
+        description="tile overlap size (must be a multiple of 16)",
+    )
+    adjust_tile_size: bool = InputField(
+        default=True,
+        description="Automatically add half the overlap to the tile size",
+    )
 
     def invoke(self, context: InvocationContext) -> ImageToXYImageTilesOutput:
         img = context.services.images.get_pil_image(self.image.image_name)
 
-        # scale down tile and overlap for the source image
-        source_tile_x = self.tile_x // self.scale
-        source_tile_y = self.tile_y // self.scale
-        source_overlap = self.overlap // self.scale
+        if self.adjust_tile_size:
+            self.tile_x += self.overlap // 2
+            self.tile_y += self.overlap // 2
 
-        dx = source_tile_x - source_overlap
-        dy = source_tile_y - source_overlap
+        if img.width < self.tile_x:
+            self.tile_x = img.width
 
-        x_tiles = math.ceil(((img.width - source_overlap) / dx))
-        y_tiles = math.ceil(((img.height - source_overlap) / dy))
+        if img.height < self.tile_y:
+            self.tile_y = img.height
+
+        dx = self.tile_x - self.overlap
+        dy = self.tile_y - self.overlap
+
+        x_tiles = math.ceil(((img.width - self.overlap) / dx))
+        y_tiles = math.ceil(((img.height - self.overlap) / dy))
 
         xyimages = []
 
         for iy in range(y_tiles):
             y1 = iy * dy
-            y2 = y1 + source_tile_y
+            y2 = y1 + self.tile_y
             if y1 > img.height:
                 break  # avoid exceeding limits
             # if block exceed height then make it a full block starting at the bottom
             if y2 > img.height:
-                y1 = img.height - source_tile_y
+                y1 = img.height - self.tile_y
                 y2 = img.height
             for ix in range(x_tiles):
                 x1 = ix * dx
-                x2 = x1 + source_tile_x
+                x2 = x1 + self.tile_x
                 if x1 > img.width:
                     break  # avoid exceeding limits
                 # if block exceeds width then make it a full block starting at the right
                 if x2 > img.width:
-                    x1 = img.width - source_tile_x
+                    x1 = img.width - self.tile_x
                     x2 = img.width
 
                 box = (x1, y1, x2, y2)
@@ -664,18 +780,22 @@ class ImageToXYImageTilesInvocation(BaseInvocation, WithWorkflow, WithMetadata):
                     node_id=self.id,
                     session_id=context.graph_execution_state_id,
                     is_intermediate=self.is_intermediate,
-                    metadata=self.metadata,
                     workflow=self.workflow,
                 )
-                xyimages.append(json.dumps([str(x1 * self.scale), str(y1 * self.scale), image_dto.image_name]))
+                xyimages.append(json.dumps([str(x1), str(y1), image_dto.image_name]))
 
         return ImageToXYImageTilesOutput(
             xyImages=xyimages,
             tile_x=self.tile_x,
             tile_y=self.tile_y,
             overlap=self.overlap,
-            scale=self.scale,
         )
+
+
+BLEND_MODES = Literal[
+    "Linear",
+    "Smart",
+]
 
 
 @invocation(
@@ -683,7 +803,7 @@ class ImageToXYImageTilesInvocation(BaseInvocation, WithWorkflow, WithMetadata):
     title="XYImage Tiles To Image",
     tags=["xy", "tile", "image"],
     category="tile",
-    version="1.0.0",
+    version="1.1.0",
 )
 class XYImageTilesToImageInvocation(BaseInvocation, WithWorkflow, WithMetadata):
     """Takes a collection of XYImage Tiles (json of array(x_pos,y_pos,image_name)) and create an image from overlapping tiles"""
@@ -693,20 +813,30 @@ class XYImageTilesToImageInvocation(BaseInvocation, WithWorkflow, WithMetadata):
         default_factory=list,
         description="The xyImage Collection",
     )
+    blend_mode: BLEND_MODES = InputField(
+        default="Smart",
+        description="Seam blending type Linear or Smart",
+        input=Input.Direct,
+    )
+    blur_size: int = InputField(
+        default=16,
+        ge=0,
+        description="Size of the blur & Gutter to use with Smart Seam",
+    )
 
     def invoke(self, context: InvocationContext) -> ImageOutput:
         new_array = [json.loads(s) for s in self.xyimages]
         sorted_array = sort_array2(new_array)
         images = [context.services.images.get_pil_image(item[2]) for item in sorted_array]
-        x_names = sort_array(set([item[0] for item in sorted_array]))
-        columns = len(x_names)
-        y_names = sort_array(set([item[1] for item in sorted_array]))
-        rows = len(y_names)
+        x_coords = sort_array({item[0] for item in sorted_array})
+        columns = len(x_coords)
+        y_coords = sort_array({item[1] for item in sorted_array})
+        rows = len(y_coords)
         tile_width = images[0].width
         tile_height = images[0].height
 
-        max_x = int(max([float(x) for x in x_names]))
-        max_y = int(max([float(y) for y in y_names]))
+        max_x = int(max([float(x) for x in x_coords]))
+        max_y = int(max([float(y) for y in y_coords]))
 
         output_width = max_x + tile_width
         output_height = max_y + tile_height
@@ -721,7 +851,7 @@ class XYImageTilesToImageInvocation(BaseInvocation, WithWorkflow, WithMetadata):
         row_image.paste(images[0], (0, 0))
         next_x = tile_width
         for ix in range(1, columns):
-            x = int(x_names[ix])
+            x = int(x_coords[ix])
             row_image.paste(images[ix], (x, 0))
             overlap_x = next_x - x
             next_x += tile_width - overlap_x
@@ -729,7 +859,11 @@ class XYImageTilesToImageInvocation(BaseInvocation, WithWorkflow, WithMetadata):
                 # blend X
                 x_img1 = images[ix - 1].crop((tile_width - overlap_x, 0, tile_width, tile_height))
                 x_img2 = images[ix].crop((0, 0, overlap_x, tile_height))
-                x_img1.paste(x_img2, (0, 0), gx.resize((overlap_x, tile_height)))
+                if self.blend_mode == "Linear":
+                    x_img1.paste(x_img2, (0, 0), gx.resize((overlap_x, tile_height)))
+                else:
+                    mask = seam_mask(x_img1, x_img2, False, self.blur_size)
+                    x_img1.paste(x_img2, (0, 0), mask)
                 row_image.paste(x_img1, (x, 0))
         output_image.paste(row_image, (0, 0))
 
@@ -742,7 +876,7 @@ class XYImageTilesToImageInvocation(BaseInvocation, WithWorkflow, WithMetadata):
             row_image_new.paste(images[iy_off], (0, 0))
             next_x = tile_width
             for ix in range(1, columns):
-                x = int(x_names[ix])
+                x = int(x_coords[ix])
                 row_image_new.paste(images[iy_off + ix], (x, 0))
                 overlap_x = next_x - x
                 next_x += tile_width - overlap_x
@@ -750,17 +884,25 @@ class XYImageTilesToImageInvocation(BaseInvocation, WithWorkflow, WithMetadata):
                     # blend X overlap
                     x_img1 = images[(iy_off + ix) - 1].crop((tile_width - overlap_x, 0, tile_width, tile_height))
                     x_img2 = images[iy_off + ix].crop((0, 0, overlap_x, tile_height))
-                    x_img1.paste(x_img2, (0, 0), gx.resize((overlap_x, tile_height)))
+                    if self.blend_mode == "Linear":
+                        x_img1.paste(x_img2, (0, 0), gx.resize((overlap_x, tile_height)))
+                    else:
+                        mask = seam_mask(x_img1, x_img2, False, self.blur_size)
+                        x_img1.paste(x_img2, (0, 0), mask)
                     row_image_new.paste(x_img1, (x, 0))
-            y = int(y_names[iy])
+            y = int(y_coords[iy])
             output_image.paste(row_image_new, (0, y))
             overlap_y = next_y - y
-            next_y += tile_width - overlap_y
+            next_y += tile_height - overlap_y
             if overlap_y > 0:
                 # blend y overlap
                 y_img1 = row_image.crop((0, tile_height - overlap_y, output_width, tile_height))
                 y_img2 = row_image_new.crop((0, 0, output_width, overlap_y))
-                y_img1.paste(y_img2, (0, 0), gy.resize((output_width, overlap_y)))
+                if self.blend_mode == "Linear":
+                    y_img1.paste(y_img2, (0, 0), gy.resize((output_width, overlap_y)))
+                else:
+                    mask = seam_mask(y_img1, y_img2, True, self.blur_size)
+                    y_img1.paste(y_img2, (0, 0), mask)
                 row_image_new.paste(y_img1, (0, 0))
                 output_image.paste(row_image_new, (0, y))
             row_image = row_image_new
@@ -783,3 +925,56 @@ class XYImageTilesToImageInvocation(BaseInvocation, WithWorkflow, WithMetadata):
             width=image_dto.width,
             height=image_dto.height,
         )
+
+
+@invocation(
+    "lcrop",
+    title="Crop Latents",
+    tags=["latents", "crop"],
+    category="latents",
+    version="1.0.0",
+)
+class CropLatentsInvocation(BaseInvocation):
+    """Crops latents"""
+
+    latents: LatentsField = InputField(
+        description=FieldDescriptions.latents,
+        input=Input.Connection,
+    )
+    width: int = InputField(
+        ge=64,
+        multiple_of=_downsampling_factor,
+        description=FieldDescriptions.width,
+    )
+    height: int = InputField(
+        ge=64,
+        multiple_of=_downsampling_factor,
+        description=FieldDescriptions.width,
+    )
+    x_offset: int = InputField(
+        ge=0,
+        multiple_of=_downsampling_factor,
+        description="x-coordinate",
+    )
+    y_offset: int = InputField(
+        ge=0,
+        multiple_of=_downsampling_factor,
+        description="y-coordinate",
+    )
+
+    def invoke(self, context: InvocationContext) -> LatentsOutput:
+        latents = context.services.latents.get(self.latents.latents_name)
+
+        x1 = self.x_offset // _downsampling_factor
+        y1 = self.y_offset // _downsampling_factor
+        x2 = x1 + (self.width // _downsampling_factor)
+        y2 = y1 + (self.height // _downsampling_factor)
+
+        cropped_latents = latents[:, :, y1:y2, x1:x2]
+
+        # resized_latents = resized_latents.to("cpu")
+
+        name = f"{context.graph_execution_state_id}__{self.id}"
+        context.services.latents.save(name, cropped_latents)
+
+        return build_latents_output(latents_name=name, latents=cropped_latents)
