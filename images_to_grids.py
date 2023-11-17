@@ -809,6 +809,10 @@ class MinimumOverlapXYTileGenerator(BaseInvocation, WithWorkflow):
         multiple_of=_downsampling_factor,
         description="minimum tile overlap size (must be a multiple of 8)",
     )
+    round_to_8: bool = InputField(
+        default=False,
+        description="Round outputs down to the nearest 8 (for pulling from a large noise field)",
+    )
 
     def invoke(self, context: InvocationContext) -> TilesOutput:
         img = context.services.images.get_pil_image(self.image.image_name)
@@ -819,8 +823,8 @@ class MinimumOverlapXYTileGenerator(BaseInvocation, WithWorkflow):
         if img.height < self.tile_y:
             self.tile_y = img.height
 
-        num_tiles_w = math.ceil(img.width / (self.tile_x - self.min_overlap))
-        num_tiles_h = math.ceil(img.height / (self.tile_y - self.min_overlap))
+        num_tiles_w = math.ceil(img.width / (self.tile_x - self.min_overlap)) if self.tile_x < img.width else 1
+        num_tiles_h = math.ceil(img.height / (self.tile_y - self.min_overlap)) if self.tile_y < img.height else 1
 
         xytiles = []
 
@@ -828,10 +832,14 @@ class MinimumOverlapXYTileGenerator(BaseInvocation, WithWorkflow):
         xytiles.append(json.dumps([str(self.tile_x), str(self.tile_y), str(self.min_overlap)]))
 
         for yiter in range(num_tiles_h):
-            y1 = (yiter * (img.height - self.tile_y)) // (num_tiles_h - 1)
+            y1 = (yiter * (img.height - self.tile_y)) // (num_tiles_h - 1) if num_tiles_h > 1 else 0
+            if self.round_to_8:
+                y1 = 8 * (y1 // 8)
             y2 = y1 + self.tile_y
             for xiter in range(num_tiles_w):
-                x1 = (xiter * (img.width - self.tile_x)) // (num_tiles_w - 1)
+                x1 = (xiter * (img.width - self.tile_x)) // (num_tiles_w - 1) if num_tiles_w > 1 else 0
+                if self.round_to_8:
+                    x1 = 8 * (x1 // 8)
                 x2 = x1 + self.tile_x
 
                 xytiles.append(json.dumps([str(x1), str(y1), str(x2), str(y2)]))
