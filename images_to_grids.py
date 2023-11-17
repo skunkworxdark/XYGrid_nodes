@@ -848,7 +848,6 @@ class ImageToXYImageTilesOutput(BaseInvocationOutput):
     xyImages: list[str] = OutputField(description="The XYImage Collection")
     tile_x: int = OutputField(description="The tile x dimension")
     tile_y: int = OutputField(description="The tile y dimension")
-    overlap: int = OutputField(description="The tile overlap size")
 
 
 @invocation(
@@ -894,7 +893,6 @@ class ImageToXYImageTilesInvocation(BaseInvocation, WithWorkflow):
             xyImages=xyimages,
             tile_x=tile_x,
             tile_y=tile_y,
-            overlap=overlap,
         )
 
 
