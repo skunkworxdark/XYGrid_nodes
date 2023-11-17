@@ -823,8 +823,16 @@ class MinimumOverlapXYTileGenerator(BaseInvocation, WithWorkflow):
         if img.height < self.tile_height:
             self.tile_height = img.height
 
-        num_tiles_w = math.ceil(img.width / (self.tile_width - self.min_overlap)) if self.tile_width < img.width else 1
-        num_tiles_h = math.ceil(img.height / (self.tile_height - self.min_overlap)) if self.tile_height < img.height else 1
+        num_tiles_w = (
+            math.ceil((img.width - self.min_overlap) / (self.tile_width - self.min_overlap))
+            if self.tile_width < img.width
+            else 1
+        )
+        num_tiles_h = (
+            math.ceil((img.height - self.min_overlap) / (self.tile_height - self.min_overlap))
+            if self.tile_height < img.height
+            else 1
+        )
 
         xytiles = []
 
@@ -1090,4 +1098,3 @@ class CropLatentsInvocation(BaseInvocation):
         context.services.latents.save(name, cropped_latents)
 
         return build_latents_output(latents_name=name, latents=cropped_latents)
-
