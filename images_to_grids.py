@@ -698,7 +698,7 @@ class TilesOutput(BaseInvocationOutput):
     title="Default XYImage Tile Generator",
     tags=["xy", "tile"],
     category="tile",
-    version="1.0.0",
+    version="1.1.0",
 )
 class DefaultXYTileGenerator(BaseInvocation, WithWorkflow):
     """Cuts up an image into overlapping tiles and outputs a string representation of the tiles to use"""
@@ -720,20 +720,22 @@ class DefaultXYTileGenerator(BaseInvocation, WithWorkflow):
     overlap: int = InputField(
         default=128,
         ge=0,
-        multiple_of=_downsampling_factor * 2,
-        description="tile overlap size (must be a multiple of 16)",
+        multiple_of=_downsampling_factor,
+        description="tile overlap size (must be a multiple of 8)",
     )
     adjust_tile_size: bool = InputField(
         default=True,
-        description="Automatically add half the overlap to the tile size",
+        description="adjust tile size to account for overlap",
     )
 
     def invoke(self, context: InvocationContext) -> TilesOutput:
         img = context.services.images.get_pil_image(self.image.image_name)
 
         if self.adjust_tile_size:
-            self.tile_width += self.overlap // 2
-            self.tile_height += self.overlap // 2
+            tiles_x = img.width // self.tile_width
+            tiles_y = img.height // self.tile_height
+            self.tile_width = (img.width + self.overlap * (tiles_x - 1)) // tiles_x
+            self.tile_height = (img.height + self.overlap * (tiles_y - 1)) // tiles_y
 
         if img.width < self.tile_width:
             self.tile_width = img.width
@@ -748,9 +750,7 @@ class DefaultXYTileGenerator(BaseInvocation, WithWorkflow):
         y_tiles = math.ceil(((img.height - self.overlap) / dy))
 
         xytiles = []
-
         xytiles.append(json.dumps(str(self.image.image_name)))
-        xytiles.append(json.dumps([str(self.tile_width), str(self.tile_height)]))
 
         for iy in range(y_tiles):
             y1 = iy * dy
@@ -773,9 +773,7 @@ class DefaultXYTileGenerator(BaseInvocation, WithWorkflow):
 
                 xytiles.append(json.dumps([str(x1), str(y1), str(x2), str(y2)]))
 
-        return TilesOutput(
-            tiles=xytiles,
-        )
+        return TilesOutput(tiles=xytiles)
 
 
 @invocation(
@@ -783,7 +781,7 @@ class DefaultXYTileGenerator(BaseInvocation, WithWorkflow):
     title="Minimum Overlap XYImage Tile Generator",
     tags=["xy", "tile"],
     category="tile",
-    version="1.0.0",
+    version="1.1.0",
 )
 class MinimumOverlapXYTileGenerator(BaseInvocation, WithWorkflow):
     """Cuts up an image into overlapping tiles and outputs a string representation of the tiles to use, taking the
@@ -835,9 +833,7 @@ class MinimumOverlapXYTileGenerator(BaseInvocation, WithWorkflow):
         )
 
         xytiles = []
-
         xytiles.append(json.dumps(str(self.image.image_name)))
-        xytiles.append(json.dumps([str(self.tile_width), str(self.tile_height)]))
 
         for yiter in range(num_tiles_h):
             y1 = (yiter * (img.height - self.tile_height)) // (num_tiles_h - 1) if num_tiles_h > 1 else 0
@@ -852,9 +848,83 @@ class MinimumOverlapXYTileGenerator(BaseInvocation, WithWorkflow):
 
                 xytiles.append(json.dumps([str(x1), str(y1), str(x2), str(y2)]))
 
-        return TilesOutput(
-            tiles=xytiles,
-        )
+        return TilesOutput(tiles=xytiles)
+
+
+@invocation(
+    "even_split_xy_tile_generator",
+    title="Even Split XYImage Tile Generator",
+    tags=["xy", "tile"],
+    category="tile",
+    version="1.0.0",
+)
+class EvenSplitXYTileGenerator(BaseInvocation, WithWorkflow):
+    """Cuts up an image into a number of even sized tiles with the overlap been a percentage of the tile size and outputs a string representation of the tiles to use"""
+
+    # Inputs
+    image: ImageField = InputField(description="The input image")
+    num_tiles: int = InputField(
+        default=2,
+        ge=1,
+        description="Number of tiles to divide image into",
+    )
+    overlap: float = InputField(
+        default=0.25,
+        ge=0,
+        lt=1,
+        description="Overlap amount of tile size (0-1)",
+    )
+
+    def invoke(self, context: InvocationContext) -> TilesOutput:
+        img = context.services.images.get_pil_image(self.image.image_name)
+
+        # Ensure tile size is divisible by 8
+        if img.width % 8 != 0 or img.height % 8 != 0:
+            raise ValueError(f"image size (({img.width}, {img.height})) must be divisible by 8")
+
+        # Calculate the overlap size based on the percentage
+        overlap_x = int((img.width / self.num_tiles) * self.overlap)
+        overlap_y = int((img.height / self.num_tiles) * self.overlap)
+
+        # Adjust overlap to be divisible by 8
+        if overlap_x % 8 != 0:
+            overlap_x = 8 * ((overlap_x // 8) + 1)
+        if overlap_y % 8 != 0:
+            overlap_y = 8 * ((overlap_y // 8) + 1)
+
+        # Calculate the tile size based on the number of tiles and overlap
+        tile_size_x = (img.width + overlap_x * (self.num_tiles - 1)) // self.num_tiles
+        tile_size_y = (img.height + overlap_y * (self.num_tiles - 1)) // self.num_tiles
+
+        # Ensure tile size is divisible by 8
+        if tile_size_x % 8 != 0:
+            tile_size_x = 8 * ((tile_size_x) // 8)
+        if tile_size_y % 8 != 0:
+            tile_size_y = 8 * ((tile_size_y) // 8)
+
+        xytiles = []
+        xytiles.append(json.dumps(str(self.image.image_name)))
+
+        for yi in range(self.num_tiles):
+            for xi in range(self.num_tiles):
+                # Calculate the top left coordinate of each tile
+                top_left_x = xi * (tile_size_x - overlap_x)
+                top_left_y = yi * (tile_size_y - overlap_y)
+
+                # Calculate the bottom right coordinate of each tile
+                bottom_right_x = min(top_left_x + tile_size_x, img.width)
+                bottom_right_y = min(top_left_y + tile_size_y, img.height)
+
+                # Adjust the last tiles in each row and column to fit exactly within the width and height of the image
+                if xi == self.num_tiles - 1:
+                    bottom_right_x = img.width
+                if yi == self.num_tiles - 1:
+                    bottom_right_y = img.height
+
+                # Append the coordinates to the list
+                xytiles.append(json.dumps([str(top_left_x), str(top_left_y), str(bottom_right_x), str(bottom_right_y)]))
+
+        return TilesOutput(tiles=xytiles)
 
 
 @invocation_output("image_to_xy_image_output")
@@ -862,8 +932,6 @@ class ImageToXYImageTilesOutput(BaseInvocationOutput):
     """Image To XYImage Tiles Output"""
 
     xyImages: list[str] = OutputField(description="The XYImage Collection")
-    tile_width: int = OutputField(description="The tile x dimension")
-    tile_height: int = OutputField(description="The tile y dimension")
 
 
 @invocation(
@@ -871,7 +939,7 @@ class ImageToXYImageTilesOutput(BaseInvocationOutput):
     title="Image To XYImage Tiles",
     tags=["xy", "tile", "image"],
     category="tile",
-    version="1.1.1",
+    version="1.2.0",
 )
 class ImageToXYImageTilesInvocation(BaseInvocation, WithWorkflow):
     """Cuts an image up into overlapping tiles and outputs as an XYImage Collection (x,y is the final position of the tile)"""
@@ -886,8 +954,6 @@ class ImageToXYImageTilesInvocation(BaseInvocation, WithWorkflow):
         img = context.services.images.get_pil_image(image_name)
 
         xyimages = []
-
-        tile_width, tile_height = [int(i) for i in json.loads(tiles.pop(0))]
 
         for item in tiles:
             x1, y1, x2, y2 = [int(i) for i in json.loads(item)]
@@ -905,11 +971,7 @@ class ImageToXYImageTilesInvocation(BaseInvocation, WithWorkflow):
             )
             xyimages.append(json.dumps([str(x1), str(y1), image_dto.image_name]))
 
-        return ImageToXYImageTilesOutput(
-            xyImages=xyimages,
-            tile_width=tile_width,
-            tile_height=tile_height,
-        )
+        return ImageToXYImageTilesOutput(xyImages=xyimages)
 
 
 BLEND_MODES = Literal[
