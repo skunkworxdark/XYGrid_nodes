@@ -353,6 +353,8 @@ class XYImageExpandOutput(BaseInvocationOutput):
     x_item: str = OutputField(description="The X item")
     y_item: str = OutputField(description="The y item")
     image: ImageField = OutputField(description="The Image item")
+    width: int = OutputField(description="The width of the image in pixels")
+    height: int = OutputField(description="The height of the image in pixels")
 
 
 @invocation(
@@ -360,10 +362,10 @@ class XYImageExpandOutput(BaseInvocationOutput):
     title="XYImage Expand",
     tags=["xy", "grid"],
     category="grid",
-    version="1.0.0",
+    version="1.1.0",
 )
 class XYImageExpandInvocation(BaseInvocation):
-    """Takes an XYImage item and outputs the X,Y and Image"""
+    """Takes an XYImage item and outputs the XItem,YItem, Image, width & height"""
 
     xyimage_item: str = InputField(description="The XYImage collection item")
 
@@ -371,9 +373,10 @@ class XYImageExpandInvocation(BaseInvocation):
         lst = json.loads(self.xyimage_item)
         x_item = str(lst[0]) if len(lst) > 0 else ""
         y_item = str(lst[1]) if len(lst) > 1 else ""
-        image = str(lst[2]) if len(lst) > 2 else ""
+        image_name = str(lst[2]) if len(lst) > 2 else ""
+        image = context.services.images.get_pil_image(image_name)
 
-        return XYImageExpandOutput(x_item=x_item, y_item=y_item, image=ImageField(image_name=image))
+        return XYImageExpandOutput(x_item=x_item, y_item=y_item, image=ImageField(image_name=image_name), width=image.width, height=image.height)
 
 
 @invocation(

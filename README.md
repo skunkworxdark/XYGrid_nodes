@@ -2,6 +2,10 @@
 
 Discord link :- [XYImage To Grid](https://discord.com/channels/1020123559063990373/1133465385182699582)
 
+Thanks To:<BR>
+@dwringer and @JPPhoto for many hours of testing and support during the development of the tiled scaling workflows and associated nodes.<BR>
+@JPPhoto for creating most of the smart seam code and also the `Miniumum Overlap` version of the Tile Generator.
+
 ## Overview
 
 These nodes add the following to InvokeAI:
@@ -11,10 +15,10 @@ These nodes add the following to InvokeAI:
 - Recombine image tiles into a single output image blending the seams 
 
 The nodes include:
-- [Images To Grids](#images-to-grids-node)  
-- [XYImages To Grid](#xyimages-to-grids-node)
-- [XYImage Tiles](#xyimage-tiles-nodes)
-- [Image To XYImages](#image-to-xyimages-node)
+- [Images To Grids](#images-to-grids-node) : combine multiple images into a grid of images
+- [XYImages To Grid](#xyimages-to-grids-node) : Take X & Y params and create a labeled image grid.
+- [XYImage Tiles](#xyimage-tiles-nodes) : Super resolution (embiggen) style tiled resizing
+- [Image To XYImages](#image-to-xyimages-node) : 
 - [Supporting nodes](#supporting-nodes)
 
 
@@ -60,7 +64,6 @@ Delete the `XYGrid_nodes` folder. Or rename to `_XYGrid_nodes` so InvokeAI will 
 - Fix `Images To Grids` node output not automatically appear on screen in the board without workarounds
 - Add other type to string and string to type conversions for other parameters e.g.  Model, Lora, images etc..
 - Create a useable way to select multiple things from a list (some kind of checkbox selection) to enable selecting things from lists like models and loras etc
-- A node that can calculate the ideal X and Y tile sizes based upon the input image ans scale value.
 
 ## Example workflows
 Example workflows are in the [workflows](workflows) folder.
@@ -70,8 +73,13 @@ Example workflows are in the [workflows](workflows) folder.
 - [xygrid_csv-step-cfg_wf.json](workflows/xygrid_csv-step-cfg_wf.json) : XY Grid workflow example using Step and CFG Scale via CSV values
 - [xygrid_csv-step-scheduler_wf.json](workflows/xygrid_csv-step-scheduler_wf.json) : XY Grid workflow example using Step and Scheduler CSV values
 - [xygrid_range-step-cfg_wf.json](workflows/xygrid_range-step-cfg_wf.json) : XY Grid workflow example using Step and CFG Scale via Integer and Float ranges
-- [xyimage_tile_wf.json](images/xyimage_tile_wf.json) : XYImage Tile scaling (Embiggen/Super Resolution) workflow
-- [i2xyi_scale_wf.json](workflows/i2xyi_scale_wf.json) : Image To XYImage basic workflow
+- [xyi_tile_default_wf.json](workflows/xyi_tile_default_wf.json) : XYImage Tile scaling + default tile generator
+- [xyi_tile_even-split_wf.json](workflows/xyi_tile_even-split_wf.json) : XYImage Tile scaling + even split tile generator
+- [xyi_tile_min-overlap_wf.json](workflows/xyi_tile_min-overlap_wf.json) : XYImage Tile scaling + minimum overlap tile generator
+- [xyi_tile_default_globalnoise_wf.json](workflows/xyi_tile_default_globalnoise_wf.json) : XYImage Tile scaling + default tile generator + globalnoise
+- [xyi_tile_even-split_globalnoise_wf.json](workflows/xyi_tile_even-split_globalnoise_wf.json) : XYImage Tile scaling + even split tile generator + globalnoise
+- [xyi_tile_min-overlap_globalnoise_wf.json](workflows/xyi_tile_min-overlap_globalnoise_wf.json) : XYImage Tile scaling + minimum overlap tile generator + globalnoise
+- [i2xyi_scale_wf.json](workflows/i2xyi_scale_wf.json) : Image To XYImage basic workflow simple scaling
 
 
 ## Main Nodes  
@@ -109,6 +117,8 @@ Grid-2:
 - `Background Color`: Grid background color
 </details>
 </details>
+
+<HR>
 
 ### `XYImages To Grids` node
 Converts `XYImage Item` collection into a labeled image grid.  The `XYImage Image` collection are built using the supporting nodes.
@@ -155,55 +165,65 @@ xygrid_range-step-cfg_example<br>
 </details>
 </details>
 
+<HR>
+
 ### `XYImage Tiles` nodes
 
-These nodes are designed to work together as a pair in a workflow. They allow you to split an image into tiles, process them, and then recombine them into an image. The nodes are:
+These nodes are designed to work together in a workflow. They allow you to split an image into tiles, process them, and then recombine them into an image. The nodes are:
 
-- `Image To XYImage Tiles` : Cuts input image into overlapping tiles of a specified size and overlap.
+- `Default XYImage Tile Generator` : Default version of a tile generator
+- `Even Split XYImage Tile Generator` : Even Split version of a tile generator
+- `Minimum Overlap XYImage Tile Generator` : Minimum Overlap  version of a tile generator
+- `Image To XYImage Tiles` : Cuts input image into overlapping image tiles. Input from a tile generator node
 - `XYImage Tiles To Image` : Merges tiles into a single image, blending the overlapping areas.
+- `Crop Latents` : cuts a section from a latent image (Used in the global noise versions of example workflows)
 
+The advantage of these nodes is that they enable you to work with larger images than usual by dividing them into smaller tiles, applying transformations, and stitching them back together. The nodes can also create overlapping tiles to improve consistency between tiles, and then blend the overlaps when reconstructing the image.
+<BR><BR>
 These nodes are not very intuitive to use, so I recommend checking out the example workflow and experimenting with it.
 
 <details><summary>Details</summary>
-<BR>
-The advantage of these nodes is that they enable you to work with larger images than usual by dividing them into smaller tiles, applying transformations, and stitching them back together. The nodes can also create overlapping tiles to ensure consistency and smoothness between the tiles, and then blend them when reconstructing the image.
-<BR><BR>
 
-The best use case is to create a super-resolution effect, similar to Invoke's old Embiggen or Automatic1111's Super Resolution. This is done by a Tile controlnet to regenerate each tile at a higher resolution, and then recombining them into a much larger image. You can also try other image control methods, but the Tile controlnet seems to produce the most consistent results. You can also use no prompts at all and still get an OK image, but using the input image's original generation settings and prompts will give more consistent results.<BR>
+The best use case is to create a super-resolution effect, similar to Invoke's old Embiggen or Automatic1111's Super Resolution. This is done with the help of the Tile controlnet to regenerate each tile at a higher resolution, and then recombining them into a much larger image. You can also try other image control methods, but the Tile controlnet seems to produce the most consistent results. You can also use no prompts at all and still get an OK image, but using the input image's original generation settings and prompts will generally give more consistent results.<BR>
+
+### Tile Generators
+These take an input image and outputs a Tiles structure (xy cords of the tiles) to cut the image into smaller tiles.<BR>
+
+This Tiles structure can then be passed onto the `Image To XYImage Tiles` node to do the actual tile cutting of an image.
+
+#### `Default XYImage Tile Generator`
+Default Tile Generator
+- If the tiles don't divide perfectly into the source image then a final tile is created starting at the right edge of the image. This means that the last tile and row of tiles can have a larger overlap unless you choose an tile size and overlap carefully.
+#### `Even Split XYImage Tile Generator`
+Even Split Tile Generator
+- Takes a number of tiles and a overlap value (tile Percentage) and produces evenly size tiles and overlaps that automatically remain as multiples of 8. (multiple of 8 are needed for image generation reasons)
+#### `Minimum Overlap XYImage Tile Generator`
+Minimum Overlap Tile Generator
+-Keeps tiles at a fixed size but adjusts the overlap to be even across the image but always above the minimum.
+
+<HR>
 
 ### `Image To XYImage Tiles`
-This takes an input image and cuts it up into smaller tiles.<BR>
+Takes a Tiles structure as input and cuts up an image into multiple tiles.  Outputting in a XYImages structure. This is then fed into an `iterate` node and fed into an XYImage Expand so each tile can be processed individually.
 
-For quick and easy results, you can use the following inputs:
-
-- Tile X/Y: Generation sizes (512 for SD1.5, 1024 for SDXL
-- Overlap: 32
-- Scale: 2, 4, 8 (higher not recommended)
-
-The way the input image is cut up is a bit complicated, but there is a logic behind it. Here is how it works:
-
-- The Tile X, Tile Y, and Overlap values are scaled down by the Scale factor. These are used to cut up the input image.
-- The first tile starts at the top-left corner of the image and has the size of the scaled down Tile X and Y values.
-- The next tile starts (scaled down Overlap value) pixels before the end of the previous one on the X axis. This is repeated until there is not enough space for another tile.
-- If the tiles don't divide perfectly into the source image then a final tile is created starting at the right edge of the image. This means that sometimes the last tile and row of tiles can have a large overlap unless you choose an ideal tile size.
-- The same process is repeated on the Y axis of the image.
-- All the tiles are packaged into an XYImage Item collection, with their X and Y parameters being their coordinates on the final enlarged image. 
-
-Choosing an ideal tile size:
-The overlap value is included in the tile size, so if you want to minimize the number of tiles needed, you need to account for that. As a rule of thumb choose the largest tile size that your GPU can generate that also is exactly divisible into the source image when scaled down and the overlap is taken into account. 
-Examples:
-- Scaling a 512 x 512 image by 2x with an Overlap of 32, use a tile size of 528 = 512 + 16 (half of the Overlap), this will give exactly 2 tiles across and 2 tiles down with a 32 pixel overlap in the middle.
-- Scaling a 512 x 512 image by 4x with an Overlap of 32, use a tile size of 1040 = 1024 + 16 (half of the Overlap), this will give exactly 2 tiles across and 2 tiles down with a 32 pixel overlap in the middle. Because we are using the tile controlnet generations sizes above 512 will still give good results but experimentation is needed.
-- Scaling a 1024 x 1024 image by 2x with an Overlap of 32, use a tile size of 1040 = 512 + 16 (half of the Overlap), this will give exactly 2 tiles across and 2 tiles down with a 32 pixel overlap in the middle.
-- Scaling a 768 x 768 image by 2x with an Overlap of 32, use a tile size of 528 = 512 + 16 (half of the Overlap), this will give exactly 3 tiles across and 3 tiles down with a 32 pixel overlap in the middle.
+<HR>
 
 ### `XYImage Tiles To Image` 
-This takes an `XYImage Tile Item` collection as output from `XYImage Collect` -> `Collect` nodes and recombines them blending the overlap areas and producing a single image. The result is a smooth and seamless image that preserves the details of each tile. It uses the X & Y parameters as coordinates to reconstruct the image.<BR>
+This takes an `XYImages` collection as output from `XYImage Collect` -> `Collect` nodes and recombines them blending the overlap areas and producing a single image. The result is a smooth and seamless image that preserves the details of each tile. It uses the X & Y parameters as coordinates to reconstruct the image.<BR>
+You have Linear  and Smart blend modes.
+- Linear just blends the whole overlapping area from neighboring tiles. 
+- Smart tries to find an ideal path between tiles and blurs then together on this. The Blur value is used to adjust how large an area is blended.
+
+<HR>
 
 <details><summary>Workflow Example</summary>
 
-[xyimage_tile_wf.json](images/xyimage_tile_wf.json)
-![xyimage_tile_wf](images/xyimage_tile_wf.png)
+- [xyi_tile_default_wf.json](workflows/xyi_tile_default_wf.json) : XYImage Tile scaling + default tile generator
+- [xyi_tile_even-split_wf.json](workflows/xyi_tile_even-split_wf.json) : XYImage Tile scaling + even split tile generator
+- [xyi_tile_min-overlap_wf.json](workflows/xyi_tile_min-overlap_wf.json) : XYImage Tile scaling + minimum overlap tile generator
+- [xyi_tile_default_globalnoise_wf.json](workflows/xyi_tile_default_globalnoise_wf.json) : XYImage Tile scaling + default tile generator + globalnoise
+- [xyi_tile_even-split_globalnoise_wf.json](workflows/xyi_tile_even-split_globalnoise_wf.json) : XYImage Tile scaling + even split tile generator + globalnoise
+- [xyi_tile_min-overlap_globalnoise_wf.json](workflows/xyi_tile_min-overlap_globalnoise_wf.json) : XYImage Tile scaling + minimum overlap tile generator + globalnoise
 </details>
 
 <details><summary>Output Example</summary>
@@ -215,7 +235,19 @@ Input:
 ![xyimage_tile-output](images/xyimage_tile-output.png)
 </details>
 
-<details><summary>Node</summary>
+<details><summary>Node Images</summary>
+
+`Default XYImage Tile Generator`
+
+![Default XYImage Tile Generator](images/tile-gen-default_node.png)
+
+`Even Split XYImage Tile Generator`
+
+![Even Split XYImage Tile Generator](images/tile-gen-evensplit_node.png)
+
+`Minimum Overlap XYImage Tile Generator`
+
+![Minimum Overlap XYImage Tile Generator](images/tile-gen-minover_node.png)
 
 `Image To XYImage Tiles`
 
@@ -224,24 +256,51 @@ Input:
 `XYImage Tiles To Image`
 
 ![xyit2i](images/xyit2i_node.png)
+
+`Crop Latents`
+
+![Crop Latents](images/crop-latents_node.png)
+
 </details>
+
+
+
 
 <details><summary>Inputs</summary>
 
-`Image To XYImage Tiles`
+`Default XYImage Tile Generator`
+- `Image` : Input Image
+- `Tile Width` : Width of the tile to cut
+- `Tile Height` : Height of the tile to cut
+- `Overlap` : Overlap to use for each tile
 
-- `Image` : Input image
-- `Tile X` : Tile width that it will be regenerated at
-- `Tile Y` : Tile height that it will be regenerated at
-- `Overlap` : Tile overlap amount after regeneration
-- `Scale` : Image scale factor
+`Even Split XYImage Tile Generator`
+- `Image` : Input Image
+- `Num Tiles` : The number rows and columns to split the image into
+- `Overlap` : Overlap amount of the tile (0..1)
+
+`Minimum Overlap XYImage Tile Generator`
+- `Image` : Input Image
+- `Tile Width` : Width of the tile to cut
+- `Tile Height` : Height of the tile to cut
+- `Min Overlap` : Minimum Overlap to use for each tile
+
+`Image To XYImage Tiles`
+- `Tiles` : Tiles structure output by a tile generator
 
 `XYImage Tiles To Image`
+- `XY Images` : `XYImage` collection. This comes from feeding the X & Y outputs of the `XYImage Expand` node and the regenerated tile image into the `XYImage Collect` node and then into a `Collect` node.
 - `Board` : Board to save to
-- `XY Images` : `XYImage Item` collection. This comes from feeding the X & Y outputs of the `XYImage Expand` node and the regenerated tile image into the `XYImage Collect` node and then into a `Collect` node.
+- `Blend Mode` : Linear or Smart
+- `Blur Size` : Blur sized used with Smart blend
+
+`Crop Latents`
+- `Latents` : Latents to be cropped
 
 </details>
 </details>
+
+<HR>
 
 ### `Image To XYImages` node
 This is probably not very useful node to most people. I created it for testing purposes while creating the Tile resize workflow. However I have included it because someone might find a use for it.<BR>
