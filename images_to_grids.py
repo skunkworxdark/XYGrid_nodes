@@ -859,17 +859,22 @@ class MinimumOverlapXYTileGenerator(BaseInvocation, WithWorkflow):
     title="Even Split XYImage Tile Generator",
     tags=["xy", "tile"],
     category="tile",
-    version="1.0.0",
+    version="1.1.0",
 )
 class EvenSplitXYTileGenerator(BaseInvocation, WithWorkflow):
     """Cuts up an image into a number of even sized tiles with the overlap been a percentage of the tile size and outputs a string representation of the tiles to use"""
 
     # Inputs
     image: ImageField = InputField(description="The input image")
-    num_tiles: int = InputField(
+    num_x_tiles: int = InputField(
         default=2,
         ge=1,
-        description="Number of tiles to divide image into",
+        description="Number of tiles to divide image into on the x axis",
+    )
+    num_y_tiles: int = InputField(
+        default=2,
+        ge=1,
+        description="Number of tiles to divide image into on the y axis",
     )
     overlap: float = InputField(
         default=0.25,
@@ -886,8 +891,8 @@ class EvenSplitXYTileGenerator(BaseInvocation, WithWorkflow):
             raise ValueError(f"image size (({img.width}, {img.height})) must be divisible by 8")
 
         # Calculate the overlap size based on the percentage
-        overlap_x = int((img.width / self.num_tiles) * self.overlap)
-        overlap_y = int((img.height / self.num_tiles) * self.overlap)
+        overlap_x = int((img.width / self.num_x_tiles) * self.overlap)
+        overlap_y = int((img.height / self.num_y_tiles) * self.overlap)
 
         # Adjust overlap to be divisible by 8
         if overlap_x % 8 != 0:
@@ -896,8 +901,8 @@ class EvenSplitXYTileGenerator(BaseInvocation, WithWorkflow):
             overlap_y = 8 * ((overlap_y // 8) + 1)
 
         # Calculate the tile size based on the number of tiles and overlap
-        tile_size_x = (img.width + overlap_x * (self.num_tiles - 1)) // self.num_tiles
-        tile_size_y = (img.height + overlap_y * (self.num_tiles - 1)) // self.num_tiles
+        tile_size_x = (img.width + overlap_x * (self.num_x_tiles - 1)) // self.num_x_tiles
+        tile_size_y = (img.height + overlap_y * (self.num_y_tiles - 1)) // self.num_y_tiles
 
         # Ensure tile size is divisible by 8
         if tile_size_x % 8 != 0:
@@ -908,8 +913,8 @@ class EvenSplitXYTileGenerator(BaseInvocation, WithWorkflow):
         xytiles = []
         xytiles.append(json.dumps(str(self.image.image_name)))
 
-        for yi in range(self.num_tiles):
-            for xi in range(self.num_tiles):
+        for yi in range(self.num_x_tiles):
+            for xi in range(self.num_y_tiles):
                 # Calculate the top left coordinate of each tile
                 top_left_x = xi * (tile_size_x - overlap_x)
                 top_left_y = yi * (tile_size_y - overlap_y)
@@ -919,9 +924,9 @@ class EvenSplitXYTileGenerator(BaseInvocation, WithWorkflow):
                 bottom_right_y = min(top_left_y + tile_size_y, img.height)
 
                 # Adjust the last tiles in each row and column to fit exactly within the width and height of the image
-                if xi == self.num_tiles - 1:
+                if xi == self.num_x_tiles - 1:
                     bottom_right_x = img.width
-                if yi == self.num_tiles - 1:
+                if yi == self.num_y_tiles - 1:
                     bottom_right_y = img.height
 
                 # Append the coordinates to the list
@@ -1017,35 +1022,40 @@ class XYImageTilesToImageInvocation(BaseInvocation, WithWorkflow, WithMetadata):
         columns = len(x_coords)
         y_coords = sort_array({item[1] for item in sorted_array})
         rows = len(y_coords)
-        tile_width = images[0].width
-        tile_height = images[0].height
+#        tile_width = images[0].width
+#        tile_height = images[0].height
 
-        max_x = int(max([float(x) for x in x_coords]))
-        max_y = int(max([float(y) for y in y_coords]))
+#        max_x = int(max([float(x) for x in x_coords]))
+#        max_y = int(max([float(y) for y in y_coords]))
 
-        output_width = max_x + tile_width
-        output_height = max_y + tile_height
+
+#        output_width = max_x + tile_width
+#        output_height = max_y + tile_height
+
+        output_width = images[-1].width + int(x_coords[-1])
+        output_height = images[-1].height + int(y_coords[-1])
+
 
         output_image = Image.new("RGBA", (output_width, output_height))
-        row_image = Image.new("RGBA", (output_width, tile_height))
+        row_image = Image.new("RGBA", (output_width, images[0].height))
 
         gy = Image.linear_gradient("L")
         gx = gy.rotate(90)
 
         # create the first row
         row_image.paste(images[0], (0, 0))
-        next_x = tile_width
+        next_x = images[0].width #tile_width
         for ix in range(1, columns):
             x = int(x_coords[ix])
             row_image.paste(images[ix], (x, 0))
             overlap_x = next_x - x
-            next_x += tile_width - overlap_x
+            next_x += images[ix].width - overlap_x
             if overlap_x > 0:
                 # blend X
-                x_img1 = images[ix - 1].crop((tile_width - overlap_x, 0, tile_width, tile_height))
-                x_img2 = images[ix].crop((0, 0, overlap_x, tile_height))
+                x_img1 = images[ix - 1].crop((images[ix - 1].width - overlap_x, 0, images[ix - 1].width, images[ix - 1].height))
+                x_img2 = images[ix].crop((0, 0, overlap_x, images[ix].height))
                 if self.blend_mode == "Linear":
-                    x_img1.paste(x_img2, (0, 0), gx.resize((overlap_x, tile_height)))
+                    x_img1.paste(x_img2, (0, 0), gx.resize((overlap_x, images[ix].height)))
                 else:
                     mask = seam_mask(x_img1, x_img2, False, self.blur_size)
                     x_img1.paste(x_img2, (0, 0), mask)
@@ -1053,24 +1063,24 @@ class XYImageTilesToImageInvocation(BaseInvocation, WithWorkflow, WithMetadata):
         output_image.paste(row_image, (0, 0))
 
         # do the rest of the rows
-        next_y = tile_height
+        next_y = images[0].height
         for iy in range(1, rows):
             # Add the first image for the row
-            row_image_new = Image.new("RGBA", (output_width, tile_height))
             iy_off = iy * columns
+            row_image_new = Image.new("RGBA", (output_width, images[iy_off].height))
             row_image_new.paste(images[iy_off], (0, 0))
-            next_x = tile_width
+            next_x = images[iy_off].width
             for ix in range(1, columns):
                 x = int(x_coords[ix])
                 row_image_new.paste(images[iy_off + ix], (x, 0))
                 overlap_x = next_x - x
-                next_x += tile_width - overlap_x
+                next_x += images[iy_off + ix].width - overlap_x
                 if overlap_x > 0:
                     # blend X overlap
-                    x_img1 = images[(iy_off + ix) - 1].crop((tile_width - overlap_x, 0, tile_width, tile_height))
-                    x_img2 = images[iy_off + ix].crop((0, 0, overlap_x, tile_height))
+                    x_img1 = images[(iy_off + ix) - 1].crop((images[(iy_off + ix) - 1].width - overlap_x, 0, images[(iy_off + ix) - 1].width, images[(iy_off + ix) - 1].height))
+                    x_img2 = images[iy_off + ix].crop((0, 0, overlap_x, images[iy_off + ix].height))
                     if self.blend_mode == "Linear":
-                        x_img1.paste(x_img2, (0, 0), gx.resize((overlap_x, tile_height)))
+                        x_img1.paste(x_img2, (0, 0), gx.resize((overlap_x, images[iy_off + ix].height)))
                     else:
                         mask = seam_mask(x_img1, x_img2, False, self.blur_size)
                         x_img1.paste(x_img2, (0, 0), mask)
@@ -1078,10 +1088,10 @@ class XYImageTilesToImageInvocation(BaseInvocation, WithWorkflow, WithMetadata):
             y = int(y_coords[iy])
             output_image.paste(row_image_new, (0, y))
             overlap_y = next_y - y
-            next_y += tile_height - overlap_y
+            next_y += images[iy_off + ix].height - overlap_y
             if overlap_y > 0:
                 # blend y overlap
-                y_img1 = row_image.crop((0, tile_height - overlap_y, output_width, tile_height))
+                y_img1 = row_image.crop((0, row_image.height - overlap_y, output_width, row_image.height))
                 y_img2 = row_image_new.crop((0, 0, output_width, overlap_y))
                 if self.blend_mode == "Linear":
                     y_img1.paste(y_img2, (0, 0), gy.resize((output_width, overlap_y)))
