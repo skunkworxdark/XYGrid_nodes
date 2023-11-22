@@ -477,8 +477,8 @@ class XYImagesToGridInvocation(BaseInvocation, WithWorkflow, WithMetadata):
                 if not self.scale_factor == 1.0:
                     image = image.resize(
                         (
-                            int(column_width),
-                            int(row_height),
+                            int(image.width * self.scale_factor),
+                            int(image.height * self.scale_factor),
                         ),
                         resample=resample_mode,
                     )
@@ -913,8 +913,8 @@ class EvenSplitXYTileGenerator(BaseInvocation, WithWorkflow):
         xytiles = []
         xytiles.append(json.dumps(str(self.image.image_name)))
 
-        for yi in range(self.num_x_tiles):
-            for xi in range(self.num_y_tiles):
+        for yi in range(self.num_y_tiles):
+            for xi in range(self.num_x_tiles):
                 # Calculate the top left coordinate of each tile
                 top_left_x = xi * (tile_size_x - overlap_x)
                 top_left_y = yi * (tile_size_y - overlap_y)
