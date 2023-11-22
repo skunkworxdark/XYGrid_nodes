@@ -1022,29 +1022,21 @@ class XYImageTilesToImageInvocation(BaseInvocation, WithWorkflow, WithMetadata):
         columns = len(x_coords)
         y_coords = sort_array({item[1] for item in sorted_array})
         rows = len(y_coords)
-#        tile_width = images[0].width
-#        tile_height = images[0].height
 
-#        max_x = int(max([float(x) for x in x_coords]))
-#        max_y = int(max([float(y) for y in y_coords]))
-
-
-#        output_width = max_x + tile_width
-#        output_height = max_y + tile_height
-
+        #use the last tile position and the tiles image size to calculate the output size
         output_width = images[-1].width + int(x_coords[-1])
         output_height = images[-1].height + int(y_coords[-1])
-
 
         output_image = Image.new("RGBA", (output_width, output_height))
         row_image = Image.new("RGBA", (output_width, images[0].height))
 
+        #create linear gradient masks
         gy = Image.linear_gradient("L")
         gx = gy.rotate(90)
 
         # create the first row
         row_image.paste(images[0], (0, 0))
-        next_x = images[0].width #tile_width
+        next_x = images[0].width
         for ix in range(1, columns):
             x = int(x_coords[ix])
             row_image.paste(images[ix], (x, 0))
