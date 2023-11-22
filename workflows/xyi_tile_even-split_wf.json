@@ -531,7 +531,7 @@
       "height": 104,
       "position": {
         "x": -5075,
-        "y": 550
+        "y": 600
       }
     },
     {
@@ -594,7 +594,7 @@
       "height": 225,
       "position": {
         "x": -5075,
-        "y": 675
+        "y": 725
       }
     },
     {
@@ -1140,7 +1140,7 @@
       "height": 104,
       "position": {
         "x": -5075,
-        "y": 425
+        "y": 475
       }
     },
     {
@@ -1194,29 +1194,37 @@
       }
     },
     {
-      "id": "800fb863-f54d-4fda-bd70-50a213f9ae86",
+      "id": "b7b8003c-dbbe-43c3-9c62-78630e913b1a",
       "type": "invocation",
       "data": {
-        "id": "800fb863-f54d-4fda-bd70-50a213f9ae86",
+        "id": "b7b8003c-dbbe-43c3-9c62-78630e913b1a",
         "type": "even_split_xy_tile_generator",
         "inputs": {
           "image": {
-            "id": "c288c8b4-884c-4c35-bb78-f823795b16fa",
+            "id": "783837a7-4656-4e5a-9f11-32621b381693",
             "name": "image",
             "type": "ImageField",
             "fieldKind": "input",
             "label": ""
           },
-          "num_tiles": {
-            "id": "d8d0dacd-a45f-4a8e-9370-7ac9befc517e",
-            "name": "num_tiles",
+          "num_x_tiles": {
+            "id": "fb9f2484-24ec-41df-9781-76544e5017df",
+            "name": "num_x_tiles",
+            "type": "integer",
+            "fieldKind": "input",
+            "label": "",
+            "value": 2
+          },
+          "num_y_tiles": {
+            "id": "3440ab51-e067-4958-85c6-eb7f781f5ae9",
+            "name": "num_y_tiles",
             "type": "integer",
             "fieldKind": "input",
             "label": "",
             "value": 2
           },
           "overlap": {
-            "id": "3dca7e9c-f06a-4b74-b1c7-12effc596d3a",
+            "id": "98d51ff3-178e-4bcf-b0d8-2819e709cd9f",
             "name": "overlap",
             "type": "float",
             "fieldKind": "input",
@@ -1226,7 +1234,7 @@
         },
         "outputs": {
           "tiles": {
-            "id": "104392f0-660d-4cdc-8018-c9bc9f257ec4",
+            "id": "5dd6e970-b739-48f7-8406-62c094ed708b",
             "name": "tiles",
             "type": "StringCollection",
             "fieldKind": "output"
@@ -1238,10 +1246,10 @@
         "embedWorkflow": false,
         "isIntermediate": true,
         "useCache": true,
-        "version": "1.0.0"
+        "version": "1.1.0"
       },
       "width": 320,
-      "height": 275,
+      "height": 332,
       "position": {
         "x": -5475,
         "y": 700
@@ -1452,17 +1460,17 @@
     {
       "source": "c14022eb-253f-44a4-b995-2feb27d9b4c1",
       "sourceHandle": "image",
-      "target": "800fb863-f54d-4fda-bd70-50a213f9ae86",
+      "target": "b7b8003c-dbbe-43c3-9c62-78630e913b1a",
       "targetHandle": "image",
-      "id": "reactflow__edge-c14022eb-253f-44a4-b995-2feb27d9b4c1image-800fb863-f54d-4fda-bd70-50a213f9ae86image",
+      "id": "reactflow__edge-c14022eb-253f-44a4-b995-2feb27d9b4c1image-b7b8003c-dbbe-43c3-9c62-78630e913b1aimage",
       "type": "default"
     },
     {
-      "source": "800fb863-f54d-4fda-bd70-50a213f9ae86",
+      "source": "b7b8003c-dbbe-43c3-9c62-78630e913b1a",
       "sourceHandle": "tiles",
       "target": "87c47d12-3436-4d64-8ef6-bae16dddc262",
       "targetHandle": "tiles",
-      "id": "reactflow__edge-800fb863-f54d-4fda-bd70-50a213f9ae86tiles-87c47d12-3436-4d64-8ef6-bae16dddc262tiles",
+      "id": "reactflow__edge-b7b8003c-dbbe-43c3-9c62-78630e913b1atiles-87c47d12-3436-4d64-8ef6-bae16dddc262tiles",
       "type": "default"
     }
   ]
