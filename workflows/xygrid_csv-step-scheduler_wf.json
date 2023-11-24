@@ -156,7 +156,7 @@
             "fieldKind": "input",
             "label": "",
             "value": {
-              "model_name": "SkunkMix",
+              "model_name": "SkunkMix-P7-5m3-ws",
               "base_model": "sd-1",
               "model_type": "main"
             }
@@ -569,7 +569,7 @@
             "type": "FloatPolymorphic",
             "fieldKind": "input",
             "label": "",
-            "value": 7.5
+            "value": 6.5
           },
           "denoising_start": {
             "id": "038555d8-93ec-4c97-ab53-b6c152286a9d",
@@ -744,7 +744,7 @@
         "embedWorkflow": false,
         "isIntermediate": true,
         "useCache": true,
-        "version": "1.0.0"
+        "version": "1.1.0"
       },
       "width": 320,
       "height": 266,
@@ -811,7 +811,7 @@
         "embedWorkflow": false,
         "isIntermediate": false,
         "useCache": true,
-        "version": "1.0.1"
+        "version": "1.1.0"
       },
       "width": 320,
       "height": 283,

@@ -310,6 +310,22 @@
             "fieldKind": "input",
             "label": "",
             "value": []
+          },
+          "blend_mode": {
+            "id": "61f91c27-f37c-46d8-8d40-cd12e712e3e4",
+            "name": "blend_mode",
+            "type": "enum",
+            "fieldKind": "input",
+            "label": "",
+            "value": "Smart"
+          },
+          "blur_size": {
+            "id": "18e4ed21-ff7b-464c-9442-bdccb58ca6e8",
+            "name": "blur_size",
+            "type": "integer",
+            "fieldKind": "input",
+            "label": "",
+            "value": 16
           }
         },
         "outputs": {
@@ -338,10 +354,10 @@
         "embedWorkflow": true,
         "isIntermediate": false,
         "useCache": true,
-        "version": "1.0.0"
+        "version": "1.1.0"
       },
       "width": 320,
-      "height": 226,
+      "height": 340,
       "position": {
         "x": -1175,
         "y": -225
@@ -509,7 +525,7 @@
         "embedWorkflow": false,
         "isIntermediate": false,
         "useCache": true,
-        "version": "1.0.0"
+        "version": "1.1.0"
       },
       "width": 320,
       "height": 396,
