@@ -21,7 +21,6 @@ from invokeai.app.invocations.baseinvocation import (
     InvocationContext,
     OutputField,
     UIComponent,
-    UIType,
     WithMetadata,
     WithWorkflow,
     invocation,
@@ -169,7 +168,6 @@ class FloatsToStringsInvocation(BaseInvocation):
         default_factory=list,
         description="float or collection of floats",
         input=Input.Connection,
-        ui_type=UIType.FloatCollection,
     )
 
     def invoke(self, context: InvocationContext) -> StringCollectionOutput:
@@ -194,7 +192,6 @@ class IntsToStringsInvocation(BaseInvocation):
         default_factory=list,
         description="int or collection of ints",
         input=Input.Connection,
-        ui_type=UIType.IntegerCollection,
     )
 
     def invoke(self, context: InvocationContext) -> StringCollectionOutput:
@@ -540,7 +537,6 @@ class ImagesToGridsInvocation(BaseInvocation, WithWorkflow, WithMetadata):
     images: list[ImageField] = InputField(
         default_factory=list,
         description="The image collection to turn into grids",
-        ui_type=UIType.ImageCollection,
     )
     columns: int = InputField(
         default=1,
