@@ -165,7 +165,7 @@ class FloatsToStringsInvocation(BaseInvocation):
     """Converts a float or collections of floats to a collection of strings"""
 
     floats: Union[float, list[float]] = InputField(
-        default_factory=list,
+        default=[],
         description="float or collection of floats",
         input=Input.Connection,
     )
@@ -189,7 +189,7 @@ class IntsToStringsInvocation(BaseInvocation):
     """Converts an integer or collection of integers to a collection of strings"""
 
     ints: Union[int, list[int]] = InputField(
-        default_factory=list,
+        default=[],
         description="int or collection of ints",
         input=Input.Connection,
     )
@@ -284,8 +284,8 @@ class XYProductOutput(BaseInvocationOutput):
 class XYProductInvocation(BaseInvocation):
     """Takes X and Y string collections and outputs a XY Item collection with every combination of X and Y"""
 
-    x_collection: list[str] = InputField(default_factory=list, description="The X collection")
-    y_collection: list[str] = InputField(default_factory=list, description="The Y collection")
+    x_collection: list[str] = InputField(default=[], description="The X collection")
+    y_collection: list[str] = InputField(default=[], description="The Y collection")
 
     def invoke(self, context: InvocationContext) -> XYProductOutput:
         combinations = list(product(self.x_collection, self.y_collection))
@@ -406,7 +406,7 @@ class XYImagesToGridInvocation(BaseInvocation, WithWorkflow, WithMetadata):
 
     board: Optional[BoardField] = InputField(default=None, description=FieldDescriptions.board, input=Input.Direct)
     xyimages: list[str] = InputField(
-        default_factory=list,
+        default=[],
         description="The XYImage item Collection",
     )
     scale_factor: Optional[float] = InputField(
@@ -535,7 +535,7 @@ class ImagesToGridsInvocation(BaseInvocation, WithWorkflow, WithMetadata):
 
     board: Optional[BoardField] = InputField(default=None, description=FieldDescriptions.board, input=Input.Direct)
     images: list[ImageField] = InputField(
-        default_factory=list,
+        default=[],
         description="The image collection to turn into grids",
     )
     columns: int = InputField(
@@ -949,7 +949,7 @@ class ImageToXYImageTilesInvocation(BaseInvocation, WithWorkflow):
     """Cuts an image up into overlapping tiles and outputs as an XYImage Collection (x,y is the final position of the tile)"""
 
     # Inputs
-    tiles: list[str] = InputField(default_factory=list, description="The list of tiles")
+    tiles: list[str] = InputField(default=[], description="The list of tiles")
 
     def invoke(self, context: InvocationContext) -> ImageToXYImageTilesOutput:
         tiles = self.tiles.copy()
@@ -996,7 +996,7 @@ class XYImageTilesToImageInvocation(BaseInvocation, WithWorkflow, WithMetadata):
 
     board: Optional[BoardField] = InputField(default=None, description=FieldDescriptions.board, input=Input.Direct)
     xyimages: list[str] = InputField(
-        default_factory=list,
+        default=[],
         description="The xyImage Collection",
     )
     blend_mode: BLEND_MODES = InputField(
