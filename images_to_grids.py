@@ -48,29 +48,56 @@ from invokeai.app.services.image_records.image_records_common import ImageCatego
 _downsampling_factor = 8
 
 
+def prepare_numeric_for_sorting(item):
+    sanitizedString = str(item).rstrip("%").lstrip("+").strip()
+    return float(sanitizedString)
+
+
+def is_item_numeric(item):
+    if isinstance(item, float):
+        return True
+    if isinstance(item, int):
+        return True
+    sanitizedString = str(item).strip()
+    numericPatterns = [
+        # Pattern: integer
+        # Example hits:
+        # • 99913
+        # • -15
+        # • +6
+        # • + 7
+        r"^[-+]?\s*\d+$",
+        # Pattern: float
+        # Example hits:
+        # • 8.0006
+        # • - 31.4
+        r"^[-+]?\s*\d+(\.\d+)?$",
+        # Pattern: percentage
+        # Example hits:
+        # • 89.1%
+        # • -0.10 %
+        # • + 0.0001   %
+        r"^[-+]?\s*\d+(\.\d+)?\s*%$",
+    ]
+    return any(re.match(pattern, sanitizedString) for pattern in numericPatterns)
+
 def is_all_numeric(array):
-    pattern = r"^-?\d+(\.\d+)?$"
-    return all(re.match(pattern, item) for item in array)
+    return all(is_item_numeric(item) for item in array)
 
 
 def sort_array(array):
     return sorted(array, key=float) if is_all_numeric(array) else sorted(array)
 
 
-def is_all_numeric2(array, i):
-    pattern = r"^-?\d+(\.\d+)?$"
-    return all(re.match(pattern, item[i]) for item in array)
-
-
 def sort_array2(array):
-    isNum0 = is_all_numeric2(array, 0)
-    isNum1 = is_all_numeric2(array, 1)
+    isNum0 = is_all_numeric(array[0])
+    isNum1 = is_all_numeric(array[1])
 
     return sorted(
         array,
         key=lambda x: (
-            (float(x[1]) if isNum1 else x[1]),
-            (float(x[0]) if isNum0 else x[0]),
+            (prepare_numeric_for_sorting(x[1]) if isNum1 else x[1]),
+            (prepare_numeric_for_sorting(x[0]) if isNum0 else x[0]),
         ),
     )
 
