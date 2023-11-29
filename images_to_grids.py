@@ -47,59 +47,67 @@ from invokeai.app.services.image_records.image_records_common import ImageCatego
 
 _downsampling_factor = 8
 
+_numericPatterns = [
+ # Pattern: integer
+ # Example hits:
+ # • 99913
+ # • -15
+ # • +6
+ # • + 7
+ r"^[-+]?\s*\d+$",
+ # Pattern: float
+ # Example hits:
+ # • 8.0006
+ # • - 31.4
+ r"^[-+]?\s*\d+(\.\d+)?$",
+ # Pattern: percentage
+ # Example hits:
+ # • 89.1%
+ # • -0.10 %
+ # • + 0.0001   %
+ r"^[-+]?\s*\d+(\.\d+)?\s*%$",
+]
 
-def prepare_numeric_for_sorting(item):
+
+def prepare_numeric_for_sorting(item: set|list|float|int|str) -> set|list[float|int]|float|int:
+    if isinstance(item, set):
+        return {prepare_numeric_for_sorting(x) for x in item}
+    if isinstance(item, list):
+        return [prepare_numeric_for_sorting(x) for x in item]
+    if isinstance(item, float) or isinstance(item, int):
+        return item
     sanitizedString = str(item).rstrip("%").lstrip("+").strip()
     return float(sanitizedString)
 
 
-def is_item_numeric(item):
-    if isinstance(item, float):
-        return True
-    if isinstance(item, int):
+def is_item_numerically_sortable(item: set|list|float|int|str) -> bool:
+    if isinstance(item, set) or isinstance(item, list):
+        return all(is_item_numerically_sortable(x) for x in item)
+    if isinstance(item, float) or isinstance(item, int):
         return True
     sanitizedString = str(item).strip()
-    numericPatterns = [
-        # Pattern: integer
-        # Example hits:
-        # • 99913
-        # • -15
-        # • +6
-        # • + 7
-        r"^[-+]?\s*\d+$",
-        # Pattern: float
-        # Example hits:
-        # • 8.0006
-        # • - 31.4
-        r"^[-+]?\s*\d+(\.\d+)?$",
-        # Pattern: percentage
-        # Example hits:
-        # • 89.1%
-        # • -0.10 %
-        # • + 0.0001   %
-        r"^[-+]?\s*\d+(\.\d+)?\s*%$",
-    ]
-    return any(re.match(pattern, sanitizedString) for pattern in numericPatterns)
-
-def is_all_numeric(array):
-    return all(is_item_numeric(item) for item in array)
+    return any(re.match(pattern, sanitizedString) for pattern in _numericPatterns)
 
 
-def sort_array(array):
-    return sorted(array, key=float) if is_all_numeric(array) else sorted(array)
+def sort_array(array: list[str|float|int]) -> list[str|float|int]:
+    if is_item_numerically_sortable(array):
+        sortedArray = sorted(array, key=prepare_numeric_for_sorting)
+        return sortedArray
+    sortedArray = sorted(array)
+    return sortedArray
 
 
-def sort_array2(array):
-    isNum0 = is_all_numeric(array[0])
-    isNum1 = is_all_numeric(array[1])
-
-    return sorted(
+def sort_array2(array: list[tuple[str, str, str]]) -> list[tuple[str, str, str]]:
+    isNum0 = is_item_numerically_sortable([item[0] for item in array])
+    isNum1 = is_item_numerically_sortable([item[1] for item in array])
+    sortResult = sorted(
         array,
         key=lambda x: (
             (prepare_numeric_for_sorting(x[1]) if isNum1 else x[1]),
             (prepare_numeric_for_sorting(x[0]) if isNum0 else x[0]),
         ),
     )
+    return sortResult
 
 
 def shift(arr, num, fill_value=255.0):
