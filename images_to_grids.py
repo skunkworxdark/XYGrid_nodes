@@ -53,7 +53,7 @@ _downsampling_factor = 8
 # - (\d+(\.\d*)?|\.\d+) - number.(number)optional|.number
 # - \s* - any whitespace after the number
 # - %?\s*$ - optional % and any whitespace after
-num_pattern = re.compile(r"^[-+]?\s*(\d+(\.\d*)?|\.\d+)\s*%?\s*$")
+num_pattern = re.compile(r"^\s*[-+]?\s*(\d+(\.\d*)?|\.\d+)\s*%?\s*$")
 
 
 def is_numeric(s: str) -> bool:
