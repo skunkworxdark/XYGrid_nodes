@@ -269,7 +269,7 @@ class StringToFloatInvocation(BaseInvocation):
     float_string: str = InputField(description="string containing a float to convert")
 
     def invoke(self, context: InvocationContext) -> FloatOutput:
-        return FloatOutput(value=float(self.float_string))
+        return FloatOutput(value=float(prep_num(self.float_string)))
 
 
 @invocation(
@@ -285,7 +285,7 @@ class StringToIntInvocation(BaseInvocation):
     int_string: str = InputField(description="string containing an integer to convert")
 
     def invoke(self, context: InvocationContext) -> IntegerOutput:
-        return IntegerOutput(value=int(self.int_string))
+        return IntegerOutput(value=int(prep_num(self.int_string)))
 
 
 @invocation(
