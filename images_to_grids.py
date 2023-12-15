@@ -273,6 +273,26 @@ class StringToFloatInvocation(BaseInvocation):
 
 
 @invocation(
+    "percent_to_float",
+    title="Percent to Float",
+    tags=["float", "percentage"],
+    category="string",
+    version="1.0.0",
+)
+class PercentToFloatInvocation(BaseInvocation):
+    """Converts a string to a float and divides it by 100."""
+
+    text: str = InputField(
+        title="Text",
+        description="Input text",
+    )
+
+    def invoke(self, context) -> FloatOutput:
+        output = float(prep_num(self.text)) / 100
+        return FloatOutput(value=output)
+
+
+@invocation(
     "string_to_int",
     title="String To Int",
     tags=["int"],
