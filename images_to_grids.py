@@ -47,67 +47,60 @@ from invokeai.app.services.image_records.image_records_common import ImageCatego
 
 _downsampling_factor = 8
 
-_numericPatterns = [
- # Pattern: integer
- # Example hits:
- # • 99913
- # • -15
- # • +6
- # • + 7
- r"^[-+]?\s*\d+$",
- # Pattern: float
- # Example hits:
- # • 8.0006
- # • - 31.4
- r"^[-+]?\s*\d+(\.\d+)?$",
- # Pattern: percentage
- # Example hits:
- # • 89.1%
- # • -0.10 %
- # • + 0.0001   %
- r"^[-+]?\s*\d+(\.\d+)?\s*%$",
-]
+# numeric pattern
+# - ^[-+]? - optional -+ at a start
+# - \s* - any whitespace before number
+# - (\d+(\.\d*)?|\.\d+) - number.(number)optional|.number
+# - \s* - any whitespace after the number
+# - %?\s*$ - optional % and any whitespace after
+num_pattern = re.compile(r"^[-+]?\s*(\d+(\.\d*)?|\.\d+)\s*%?\s*$")
 
 
-def prepare_numeric_for_sorting(item: set|list|float|int|str) -> set|list[float|int]|float|int:
-    if isinstance(item, set):
-        return {prepare_numeric_for_sorting(x) for x in item}
-    if isinstance(item, list):
-        return [prepare_numeric_for_sorting(x) for x in item]
-    if isinstance(item, float) or isinstance(item, int):
-        return item
-    sanitizedString = str(item).rstrip("%").lstrip("+").strip()
-    return float(sanitizedString)
+def is_numeric(s: str) -> bool:
+    """checks if a string is numeric ignoring leading + trailing % and any whitespace."""
+
+    return bool(num_pattern.match(s))
 
 
-def is_item_numerically_sortable(item: set|list|float|int|str) -> bool:
-    if isinstance(item, set) or isinstance(item, list):
-        return all(is_item_numerically_sortable(x) for x in item)
-    if isinstance(item, float) or isinstance(item, int):
-        return True
-    sanitizedString = str(item).strip()
-    return any(re.match(pattern, sanitizedString) for pattern in _numericPatterns)
+def prep_num(s: str) -> str:
+    """removes all + or % or whitespace"""
+
+    return "".join(s.split()).replace("%", "").replace("+", "")
 
 
-def sort_array(array: list[str|float|int]) -> list[str|float|int]:
-    if is_item_numerically_sortable(array):
-        sortedArray = sorted(array, key=prepare_numeric_for_sorting)
-        return sortedArray
-    sortedArray = sorted(array)
-    return sortedArray
+def is_all_numeric(array: list[str]) -> bool:
+    """returns if all elements in an array are numeric or not"""
+
+    return all(is_numeric(item) for item in array)
+
+
+def sort_array(array: list[str]) -> list[str]:
+    """sort array of str but if they are all numeric then it will sort the as numbers"""
+
+    return sorted(array, key=lambda x: float(prep_num(x))) if is_all_numeric(array) else sorted(array)
+
+
+def is_all_numeric2(array: list[tuple[str, str, str]], i: int) -> bool:
+    """returns if all elements in a 2D array index I are numeric or not"""
+
+    return all(is_numeric(item[i]) for item in array)
 
 
 def sort_array2(array: list[tuple[str, str, str]]) -> list[tuple[str, str, str]]:
-    isNum0 = is_item_numerically_sortable([item[0] for item in array])
-    isNum1 = is_item_numerically_sortable([item[1] for item in array])
-    sortResult = sorted(
+    """sort 2D array of str but if they are all numeric then it will sort them as numeric
+    specifically it will sort them index 1,0 because it is expecting x,y.
+    This is to ensure it is in the right order for XY grid processing"""
+
+    isNum0 = is_all_numeric2(array, 0)
+    isNum1 = is_all_numeric2(array, 1)
+
+    return sorted(
         array,
         key=lambda x: (
-            (prepare_numeric_for_sorting(x[1]) if isNum1 else x[1]),
-            (prepare_numeric_for_sorting(x[0]) if isNum0 else x[0]),
+            (float(prep_num(x[1])) if isNum1 else x[1]),
+            (float(prep_num(x[0])) if isNum0 else x[0]),
         ),
     )
-    return sortResult
 
 
 def shift(arr, num, fill_value=255.0):
