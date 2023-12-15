@@ -10,6 +10,7 @@ from typing import Literal, Optional, Union
 
 import numpy as np
 from PIL import Image, ImageDraw, ImageFilter, ImageFont, ImageOps
+from PIL.Image import Image as PILImageType
 
 import invokeai.assets.fonts as font_assets
 from invokeai.app.invocations.baseinvocation import (
@@ -48,7 +49,8 @@ from invokeai.app.services.image_records.image_records_common import ImageCatego
 _downsampling_factor = 8
 
 # numeric pattern
-# - ^[-+]? - optional -+ at a start
+# - ^s* - start of line then any whitespace
+# - [-+]? - optional -+ at a start
 # - \s* - any whitespace before number
 # - (\d+(\.\d*)?|\.\d+) - number.(number)optional|.number
 # - \s* - any whitespace after the number
@@ -81,7 +83,7 @@ def sort_array(array: list[str]) -> list[str]:
 
 
 def is_all_numeric2(array: list[tuple[str, str, str]], i: int) -> bool:
-    """returns if all elements in a 2D array index I are numeric or not"""
+    """returns if all elements in a 2D array index i are numeric or not"""
 
     return all(is_numeric(item[i]) for item in array)
 
@@ -103,7 +105,7 @@ def sort_array2(array: list[tuple[str, str, str]]) -> list[tuple[str, str, str]]
     )
 
 
-def shift(arr, num, fill_value=255.0):
+def shift(arr: np.ndarray, num: int, fill_value: float = 255.0):
     result = np.full_like(arr, fill_value)
     if num > 0:
         result[num:] = arr[:-num]
@@ -114,17 +116,19 @@ def shift(arr, num, fill_value=255.0):
     return result
 
 
-def get_seam_line(i1: Image, i2: Image, rotate: bool, gutter: int) -> Image:
+def get_seam_line(i1: PILImageType, i2: PILImageType, rotate: bool, gutter: int) -> PILImageType:
     ia1 = np.array(i1.convert("RGB")) / 255.0
+
+    # BT.601 luminance conversion
+    lc = np.array([0.2989, 0.5870, 0.1140])
     if i1.mode != "L":
-        # ia1 = np.sum(ia1, -1) / 3.0
-        ia1 = np.dot(ia1, [0.2989, 0.5870, 0.1140])
+        ia1 = np.tensordot(ia1, lc, axes=1)
 
     ia2 = np.array(i2.convert("RGB")) / 255.0
     if i2.mode != "L":
-        # ia2 = np.sum(ia2, -1) / 3.0
-        ia2 = np.dot(ia2, [0.2989, 0.5870, 0.1140])
+        ia2 = np.tensordot(ia2, lc, axes=1)
 
+    #calc difference between images
     ia = ia2 - ia1
 
     if rotate:
@@ -134,9 +138,6 @@ def get_seam_line(i1: Image, i2: Image, rotate: bool, gutter: int) -> Image:
     max_y, max_x = ia.shape
     max_x -= gutter
     min_x = gutter
-
-    # print("SHAPE:")
-    # print(ia.shape)
 
     energy = np.abs(np.gradient(ia, axis=0)) + np.abs(np.gradient(ia, axis=1))
 
@@ -174,7 +175,7 @@ def get_seam_line(i1: Image, i2: Image, rotate: bool, gutter: int) -> Image:
     return image
 
 
-def seam_mask(i1: Image, i2: Image, rotate: bool, blur_size: int) -> Image:
+def seam_mask(i1: PILImageType, i2: PILImageType, rotate: bool, blur_size: int) -> PILImageType:
     seam = get_seam_line(i1, i2, rotate, blur_size + 1)
     #    blur = ImageFilter.GaussianBlur(float(blur_size))
     blur = ImageFilter.BoxBlur(float(blur_size))
@@ -238,7 +239,7 @@ class IntsToStringsInvocation(BaseInvocation):
     title="CSV To Strings",
     tags=["xy", "grid", "csv"],
     category="util",
-    version="1.0.0",
+    version="1.0.1",
 )
 class CSVToStringsInvocation(BaseInvocation):
     """Converts a CSV string to a collection of strings"""
@@ -246,7 +247,7 @@ class CSVToStringsInvocation(BaseInvocation):
     csv: str = InputField(description="csv string")
 
     def invoke(self, context: InvocationContext) -> StringCollectionOutput:
-        return StringCollectionOutput(collection=self.csv.split(",").rstrip())
+        return StringCollectionOutput(collection=self.csv.split(","))
 
 
 @invocation(
@@ -254,7 +255,7 @@ class CSVToStringsInvocation(BaseInvocation):
     title="String To Float",
     tags=["float", "string"],
     category="util",
-    version="1.0.0",
+    version="1.0.1",
 )
 class StringToFloatInvocation(BaseInvocation):
     """Converts a string to a float"""
@@ -267,7 +268,7 @@ class StringToFloatInvocation(BaseInvocation):
 
 @invocation(
     "percent_to_float",
-    title="Percent to Float",
+    title="Percent To Float",
     tags=["float", "percentage"],
     category="string",
     version="1.0.0",
@@ -290,7 +291,7 @@ class PercentToFloatInvocation(BaseInvocation):
     title="String To Int",
     tags=["int"],
     category="util",
-    version="1.0.0",
+    version="1.0.1",
 )
 class StringToIntInvocation(BaseInvocation):
     """Converts a string to an integer"""
@@ -424,7 +425,13 @@ class XYImageExpandInvocation(BaseInvocation):
         image_name = str(lst[2]) if len(lst) > 2 else ""
         image = context.services.images.get_pil_image(image_name)
 
-        return XYImageExpandOutput(x_item=x_item, y_item=y_item, image=ImageField(image_name=image_name), width=image.width, height=image.height)
+        return XYImageExpandOutput(
+            x_item=x_item,
+            y_item=y_item,
+            image=ImageField(image_name=image_name),
+            width=image.width,
+            height=image.height,
+        )
 
 
 @invocation(
@@ -450,7 +457,7 @@ class XYImageCollectInvocation(BaseInvocation):
     title="XYImages To Grid",
     tags=["xy", "grid", "image"],
     category="grid",
-    version="1.0.0",
+    version="1.1.1",
 )
 class XYImagesToGridInvocation(BaseInvocation, WithWorkflow, WithMetadata):
     """Takes Collection of XYImages (json of (x_item,y_item,image_name)array), sorts the images into X,Y and creates a grid image with labels"""
@@ -460,7 +467,7 @@ class XYImagesToGridInvocation(BaseInvocation, WithWorkflow, WithMetadata):
         default_factory=list,
         description="The XYImage item Collection",
     )
-    scale_factor: Optional[float] = InputField(
+    scale_factor: float = InputField(
         default=1.0,
         gt=0,
         description="The factor by which to scale the images",
@@ -483,8 +490,8 @@ class XYImagesToGridInvocation(BaseInvocation, WithWorkflow, WithMetadata):
         new_array = [json.loads(s) for s in self.xyimages]
         sorted_array = sort_array2(new_array)
         images = [context.services.images.get_pil_image(item[2]) for item in sorted_array]
-        x_labels = sort_array({item[0] for item in sorted_array})
-        y_labels = sort_array({item[1] for item in sorted_array})
+        x_labels = sort_array(list({item[0] for item in sorted_array}))
+        y_labels = sort_array(list({item[1] for item in sorted_array}))
         columns = len(x_labels)
         rows = len(y_labels)
         column_width = int(max([image.width for image in images]) * self.scale_factor)
@@ -579,7 +586,7 @@ class XYImagesToGridInvocation(BaseInvocation, WithWorkflow, WithMetadata):
     title="Images To Grids",
     tags=["grid", "image"],
     category="grid",
-    version="1.0.0",
+    version="1.1.0",
 )
 class ImagesToGridsInvocation(BaseInvocation, WithWorkflow, WithMetadata):
     """Takes a collection of images and outputs a collection of generated grid images"""
@@ -605,7 +612,7 @@ class ImagesToGridsInvocation(BaseInvocation, WithWorkflow, WithMetadata):
         ge=0,
         description="The space to be added between images",
     )
-    scale_factor: Optional[float] = InputField(
+    scale_factor: float = InputField(
         default=1.0,
         gt=0,
         description="The factor by which to scale the images",
@@ -751,7 +758,7 @@ class TilesOutput(BaseInvocationOutput):
     category="tile",
     version="1.1.0",
 )
-class DefaultXYTileGenerator(BaseInvocation, WithWorkflow):
+class DefaultXYTileGenerator(BaseInvocation):
     """Cuts up an image into overlapping tiles and outputs a string representation of the tiles to use"""
 
     # Inputs
@@ -834,7 +841,7 @@ class DefaultXYTileGenerator(BaseInvocation, WithWorkflow):
     category="tile",
     version="1.1.0",
 )
-class MinimumOverlapXYTileGenerator(BaseInvocation, WithWorkflow):
+class MinimumOverlapXYTileGenerator(BaseInvocation):
     """Cuts up an image into overlapping tiles and outputs a string representation of the tiles to use, taking the
     input overlap as a minimum"""
 
@@ -909,7 +916,7 @@ class MinimumOverlapXYTileGenerator(BaseInvocation, WithWorkflow):
     category="tile",
     version="1.1.0",
 )
-class EvenSplitXYTileGenerator(BaseInvocation, WithWorkflow):
+class EvenSplitXYTileGenerator(BaseInvocation):
     """Cuts up an image into a number of even sized tiles with the overlap been a percentage of the tile size and outputs a string representation of the tiles to use"""
 
     # Inputs
@@ -1041,7 +1048,7 @@ BLEND_MODES = Literal[
     title="XYImage Tiles To Image",
     tags=["xy", "tile", "image"],
     category="tile",
-    version="1.1.0",
+    version="1.1.1",
 )
 class XYImageTilesToImageInvocation(BaseInvocation, WithWorkflow, WithMetadata):
     """Takes a collection of XYImage Tiles (json of array(x_pos,y_pos,image_name)) and create an image from overlapping tiles"""
@@ -1066,19 +1073,19 @@ class XYImageTilesToImageInvocation(BaseInvocation, WithWorkflow, WithMetadata):
         new_array = [json.loads(s) for s in self.xyimages]
         sorted_array = sort_array2(new_array)
         images = [context.services.images.get_pil_image(item[2]) for item in sorted_array]
-        x_coords = sort_array({item[0] for item in sorted_array})
+        x_coords = sort_array(list({item[0] for item in sorted_array}))
         columns = len(x_coords)
-        y_coords = sort_array({item[1] for item in sorted_array})
+        y_coords = sort_array(list({item[1] for item in sorted_array}))
         rows = len(y_coords)
 
-        #use the last tile position and the tiles image size to calculate the output size
+        # use the last tile position and the tiles image size to calculate the output size
         output_width = images[-1].width + int(x_coords[-1])
         output_height = images[-1].height + int(y_coords[-1])
 
         output_image = Image.new("RGBA", (output_width, output_height))
         row_image = Image.new("RGBA", (output_width, images[0].height))
 
-        #create linear gradient masks
+        # create linear gradient masks
         gy = Image.linear_gradient("L")
         gx = gy.rotate(90)
 
@@ -1092,7 +1099,14 @@ class XYImageTilesToImageInvocation(BaseInvocation, WithWorkflow, WithMetadata):
             next_x += images[ix].width - overlap_x
             if overlap_x > 0:
                 # blend X
-                x_img1 = images[ix - 1].crop((images[ix - 1].width - overlap_x, 0, images[ix - 1].width, images[ix - 1].height))
+                x_img1 = images[ix - 1].crop(
+                    (
+                        images[ix - 1].width - overlap_x,
+                        0,
+                        images[ix - 1].width,
+                        images[ix - 1].height,
+                    )
+                )
                 x_img2 = images[ix].crop((0, 0, overlap_x, images[ix].height))
                 if self.blend_mode == "Linear":
                     x_img1.paste(x_img2, (0, 0), gx.resize((overlap_x, images[ix].height)))
@@ -1117,10 +1131,21 @@ class XYImageTilesToImageInvocation(BaseInvocation, WithWorkflow, WithMetadata):
                 next_x += images[iy_off + ix].width - overlap_x
                 if overlap_x > 0:
                     # blend X overlap
-                    x_img1 = images[(iy_off + ix) - 1].crop((images[(iy_off + ix) - 1].width - overlap_x, 0, images[(iy_off + ix) - 1].width, images[(iy_off + ix) - 1].height))
+                    x_img1 = images[(iy_off + ix) - 1].crop(
+                        (
+                            images[(iy_off + ix) - 1].width - overlap_x,
+                            0,
+                            images[(iy_off + ix) - 1].width,
+                            images[(iy_off + ix) - 1].height,
+                        )
+                    )
                     x_img2 = images[iy_off + ix].crop((0, 0, overlap_x, images[iy_off + ix].height))
                     if self.blend_mode == "Linear":
-                        x_img1.paste(x_img2, (0, 0), gx.resize((overlap_x, images[iy_off + ix].height)))
+                        x_img1.paste(
+                            x_img2,
+                            (0, 0),
+                            gx.resize((overlap_x, images[iy_off + ix].height)),
+                        )
                     else:
                         mask = seam_mask(x_img1, x_img2, False, self.blur_size)
                         x_img1.paste(x_img2, (0, 0), mask)
@@ -1128,7 +1153,7 @@ class XYImageTilesToImageInvocation(BaseInvocation, WithWorkflow, WithMetadata):
             y = int(y_coords[iy])
             output_image.paste(row_image_new, (0, y))
             overlap_y = next_y - y
-            next_y += images[iy_off + ix].height - overlap_y
+            next_y += images[iy_off].height - overlap_y
             if overlap_y > 0:
                 # blend y overlap
                 y_img1 = row_image.crop((0, row_image.height - overlap_y, output_width, row_image.height))

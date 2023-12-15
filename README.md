@@ -4,7 +4,8 @@ Discord link:- [XYImage To Grid](https://discord.com/channels/102012355906399037
 
 Thanks To:<BR>
 @dwringer and @JPPhoto for many hours of testing and support during the development of the tiled scaling workflows and associated nodes.<BR>
-@JPPhoto for creating most of the smart seam code and also the `Minimum Overlap` version of the Tile Generator.
+@JPPhoto for creating most of the smart seam code and also the `Minimum Overlap` version of the Tile Generator.<BR>
+@Jaid for the PR to add the `Percentage To Float` node and inspiration for improving and reworking the sorting to handle it.<BR>
 
 ## Overview
 
@@ -63,7 +64,7 @@ Delete the `XYGrid_nodes` folder. Or rename it to `_XYGrid_nodes` so InvokeAI wi
 ## TODO
 - Fix the `Images To Grids` node output not automatically appearing onscreen in the board without workarounds
 - Add other types to string and string to types conversions for other parameters e.g.  Model, Lora, images etc...
-- Create a useable way to select multiple things from a list (checkbox selection) to enable selecting things from lists like models and loras etc
+- Create a useable way to select multiple things from a list (checkbox selection) to enable selecting things from lists like models and Loras etc
 
 ## Example workflows
 Example workflows are in the [workflows](workflows) folder.
@@ -363,6 +364,7 @@ These nodes provide a way of extracting the X and Y data from `XY` & `XYImage` c
 |-|-|
 |`XY Expand`|Extracts X & Y strings from an `XY Item` output of the `XY Product` -> `iterate` node.<BR> The X & Y outputs can be passed to the X & Y inputs of the `XYImage Collect` node and used as the labels for the `XYImage To Grid` node.<BR> The X & Y outputs can be used directly into node inputs that accept strings e.g. Prompt, String Join etc... However, before being used as input to other nodes they will need to be converted into the correct type. This can be done with the `String To Float` and `String To Int` nodes|
 |`XYImage Expand`|This is used as part of an `XY Image Tile` workflow. It extracts the X, Y & Image tile from an `XYImage Item` output of the `Image To XYImage Tile` -> `iterate` node.<BR>  The X & Y outputs **MUST** be passed to X & Y inputs of the `XYImage Collect` node as is to ensure the recombination works.<BR> The Image output is used with a `Tile` controlnet (or similar method) to generate a new up-scaled Image Tile. These are then also passed into the `XYImage Collect` node and then finally onto the `XYImage Tile To Image` node.|
+|`Percent To Float`|Converts a string to a float and divides it by 100. This is useful for instances where you want to define a fraction as a percentage. Ths could be used used as input by nodes that accept the float but especially ones that expect a fraction like Denoise start/end etc...|
 |`String To Float`|Converts a string to a float. This is needed to convert the output of the `XY Expand` node before it can be used as input by nodes that accept the float data type e.g. CFG, Denoise start/end etc...|
 |`String To Int`|Converts a string to an integer. This is needed to convert the output of the `XY Expand` node before it can be used as input by nodes that accept the integer data type e.g. Step, Width, Height etc....|
 |`String To Scheduler`|Converts a string to a scheduler. This is needed to convert the output of the `XY Expand` node before it can be used as input by nodes that accept the scheduler data type.  Scheduler has to be provided as a string via a `CSV` and `string` based node in the internal name format.<BR> At the time of writing this can only be from the following values (ddim, ddpm, deis, lms, lms_k, pndm, heun, heun_k, euler, euler_k, euler_a, kdpm_2, kdpm_2_a, dpmpp_2s, dpmpp_2s_k, dpmpp_2m, dpmpp_2m_k, dpmpp_2m_sde, dpmpp_2m_sde_k, dpmpp_sde, dpmpp_sde_k, unipc) if in the future these are added to then the list can be found in the core schedulers.py file|
