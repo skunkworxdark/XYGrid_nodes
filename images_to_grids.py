@@ -22,7 +22,6 @@ from invokeai.app.invocations.baseinvocation import (
     InvocationContext,
     OutputField,
     UIComponent,
-    UIType,
     WithMetadata,
     invocation,
     invocation_output,
@@ -194,10 +193,9 @@ class FloatsToStringsInvocation(BaseInvocation):
     """Converts a float or collections of floats to a collection of strings"""
 
     floats: Union[float, list[float]] = InputField(
-        default_factory=list,
+        default=[],
         description="float or collection of floats",
         input=Input.Connection,
-        ui_type=UIType.FloatCollection,
     )
 
     def invoke(self, context: InvocationContext) -> StringCollectionOutput:
