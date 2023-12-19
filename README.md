@@ -59,11 +59,11 @@ Delete the `XYGrid_nodes` folder. Or rename it to `_XYGrid_nodes` so InvokeAI wi
 - `Images To Grids` output images don't automatically appear onscreen on a board.
   - Refresh the browser or force the board to load more images.
   - Or add iterate and show/save image nodes to the output of the `Images To Grids` node.
-- Image generation will stop will stop with an invalid scheduler name.
+- Image generation will stop with an invalid scheduler name.
 
 ## TODO
 - Fix the `Images To Grids` node output not automatically appearing onscreen in the board without workarounds
-- Add other types to string and string to types conversions for other parameters e.g.  Model, Lora, images etc...
+- Add other "types to string" and "string to types" conversions for other parameters e.g.  Model, Lora, images etc...
 - Create a useable way to select multiple things from a list (checkbox selection) to enable selecting things from lists like models and Loras etc
 
 ## Example workflows

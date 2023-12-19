@@ -24,7 +24,6 @@ from invokeai.app.invocations.baseinvocation import (
     UIComponent,
     UIType,
     WithMetadata,
-    WithWorkflow,
     invocation,
     invocation_output,
 )
@@ -214,16 +213,15 @@ class FloatsToStringsInvocation(BaseInvocation):
     title="Ints To Strings",
     tags=["int", "string"],
     category="util",
-    version="1.0.0",
+    version="1.1.0",
 )
 class IntsToStringsInvocation(BaseInvocation):
     """Converts an integer or collection of integers to a collection of strings"""
 
     ints: Union[int, list[int]] = InputField(
-        default_factory=list,
+        default=[],
         description="int or collection of ints",
         input=Input.Connection,
-        ui_type=UIType.IntegerCollection,
     )
 
     def invoke(self, context: InvocationContext) -> StringCollectionOutput:
@@ -331,13 +329,13 @@ class XYProductOutput(BaseInvocationOutput):
     title="XY Product",
     tags=["xy", "grid", "collect"],
     category="grid",
-    version="1.0.0",
+    version="1.1.0",
 )
 class XYProductInvocation(BaseInvocation):
     """Takes X and Y string collections and outputs a XY Item collection with every combination of X and Y"""
 
-    x_collection: list[str] = InputField(default_factory=list, description="The X collection")
-    y_collection: list[str] = InputField(default_factory=list, description="The Y collection")
+    x_collection: list[str] = InputField(default=[], description="The X collection")
+    y_collection: list[str] = InputField(default=[], description="The Y collection")
 
     def invoke(self, context: InvocationContext) -> XYProductOutput:
         combinations = list(product(self.x_collection, self.y_collection))
@@ -457,14 +455,14 @@ class XYImageCollectInvocation(BaseInvocation):
     title="XYImages To Grid",
     tags=["xy", "grid", "image"],
     category="grid",
-    version="1.1.1",
+    version="1.2.0",
 )
-class XYImagesToGridInvocation(BaseInvocation, WithWorkflow, WithMetadata):
+class XYImagesToGridInvocation(BaseInvocation, WithMetadata):
     """Takes Collection of XYImages (json of (x_item,y_item,image_name)array), sorts the images into X,Y and creates a grid image with labels"""
 
     board: Optional[BoardField] = InputField(default=None, description=FieldDescriptions.board, input=Input.Direct)
     xyimages: list[str] = InputField(
-        default_factory=list,
+        default=[],
         description="The XYImage item Collection",
     )
     scale_factor: float = InputField(
@@ -571,7 +569,7 @@ class XYImagesToGridInvocation(BaseInvocation, WithWorkflow, WithMetadata):
             session_id=context.graph_execution_state_id,
             is_intermediate=self.is_intermediate,
             metadata=self.metadata,
-            workflow=self.workflow,
+            workflow=context.workflow,
         )
 
         return ImageOutput(
@@ -586,16 +584,15 @@ class XYImagesToGridInvocation(BaseInvocation, WithWorkflow, WithMetadata):
     title="Images To Grids",
     tags=["grid", "image"],
     category="grid",
-    version="1.1.0",
+    version="1.2.0",
 )
-class ImagesToGridsInvocation(BaseInvocation, WithWorkflow, WithMetadata):
+class ImagesToGridsInvocation(BaseInvocation, WithMetadata):
     """Takes a collection of images and outputs a collection of generated grid images"""
 
     board: Optional[BoardField] = InputField(default=None, description=FieldDescriptions.board, input=Input.Direct)
     images: list[ImageField] = InputField(
-        default_factory=list,
+        default=[],
         description="The image collection to turn into grids",
-        ui_type=UIType.ImageCollection,
     )
     columns: int = InputField(
         default=1,
@@ -674,7 +671,7 @@ class ImagesToGridsInvocation(BaseInvocation, WithWorkflow, WithMetadata):
                     session_id=context.graph_execution_state_id,
                     is_intermediate=self.is_intermediate,
                     metadata=self.metadata,
-                    workflow=self.workflow,
+                    workflow=context.workflow,
                 )
                 grid_images.append(ImageField(image_name=image_dto.image_name))
                 output_image = Image.new(
@@ -694,7 +691,7 @@ class ImagesToGridsInvocation(BaseInvocation, WithWorkflow, WithMetadata):
                 session_id=context.graph_execution_state_id,
                 is_intermediate=self.is_intermediate,
                 metadata=self.metadata,
-                workflow=self.workflow,
+                workflow=context.workflow,
             )
             grid_images.append(ImageField(image_name=image_dto.image_name))
 
@@ -706,9 +703,9 @@ class ImagesToGridsInvocation(BaseInvocation, WithWorkflow, WithMetadata):
     title="Image To XYImage Collection",
     tags=["xy", "grid", "image"],
     category="grid",
-    version="1.0.0",
+    version="1.1.0",
 )
-class ImageToXYImageCollectionInvocation(BaseInvocation, WithWorkflow, WithMetadata):
+class ImageToXYImageCollectionInvocation(BaseInvocation, WithMetadata):
     """Cuts an image up into columns and rows and outputs XYImage Collection"""
 
     # Inputs
@@ -737,7 +734,7 @@ class ImageToXYImageCollectionInvocation(BaseInvocation, WithWorkflow, WithMetad
                     session_id=context.graph_execution_state_id,
                     is_intermediate=self.is_intermediate,
                     metadata=self.metadata,
-                    workflow=self.workflow,
+                    workflow=context.workflow,
                 )
                 xyimages.append(json.dumps([str(x), str(y), image_dto.image_name]))
 
@@ -1002,13 +999,13 @@ class ImageToXYImageTilesOutput(BaseInvocationOutput):
     title="Image To XYImage Tiles",
     tags=["xy", "tile", "image"],
     category="tile",
-    version="1.2.0",
+    version="1.3.0",
 )
-class ImageToXYImageTilesInvocation(BaseInvocation, WithWorkflow):
+class ImageToXYImageTilesInvocation(BaseInvocation):
     """Cuts an image up into overlapping tiles and outputs as an XYImage Collection (x,y is the final position of the tile)"""
 
     # Inputs
-    tiles: list[str] = InputField(default_factory=list, description="The list of tiles")
+    tiles: list[str] = InputField(default=[], description="The list of tiles")
 
     def invoke(self, context: InvocationContext) -> ImageToXYImageTilesOutput:
         tiles = self.tiles.copy()
@@ -1030,7 +1027,7 @@ class ImageToXYImageTilesInvocation(BaseInvocation, WithWorkflow):
                 node_id=self.id,
                 session_id=context.graph_execution_state_id,
                 is_intermediate=self.is_intermediate,
-                workflow=self.workflow,
+                workflow=context.workflow,
             )
             xyimages.append(json.dumps([str(x1), str(y1), image_dto.image_name]))
 
@@ -1048,14 +1045,14 @@ BLEND_MODES = Literal[
     title="XYImage Tiles To Image",
     tags=["xy", "tile", "image"],
     category="tile",
-    version="1.1.1",
+    version="1.2.0",
 )
-class XYImageTilesToImageInvocation(BaseInvocation, WithWorkflow, WithMetadata):
+class XYImageTilesToImageInvocation(BaseInvocation, WithMetadata):
     """Takes a collection of XYImage Tiles (json of array(x_pos,y_pos,image_name)) and create an image from overlapping tiles"""
 
     board: Optional[BoardField] = InputField(default=None, description=FieldDescriptions.board, input=Input.Direct)
     xyimages: list[str] = InputField(
-        default_factory=list,
+        default=[],
         description="The xyImage Collection",
     )
     blend_mode: BLEND_MODES = InputField(
@@ -1177,7 +1174,7 @@ class XYImageTilesToImageInvocation(BaseInvocation, WithWorkflow, WithMetadata):
             session_id=context.graph_execution_state_id,
             is_intermediate=self.is_intermediate,
             metadata=self.metadata,
-            workflow=self.workflow,
+            workflow=context.workflow,
         )
 
         return ImageOutput(
