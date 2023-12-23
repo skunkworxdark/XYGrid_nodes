@@ -347,7 +347,7 @@ These nodes provide ways of inputting and converting the X & Y data into a colle
 |-|-|
 |`Floats To Strings`| Converts a Float or collections of Floats to a collection of strings.<BR> The intended use is to take a float collection from a `Float Range` node that can be passed into the `XY Product` node.|
 |`Ints To Strings`| Converts an Integer or collection of Integers to a collection of strings.<BR> The intended use is to take an Integer collection from an `Integer Range` node that can be passed into the `XY Product` node.|
-|`CSV To Strings`| Converts a CSV string to a collection of strings.<BR> The output of this is intended as input to the `XY Product` node. This splits the input string on every comma character and ignores any other CSV conventions like quoted strings|
+|`CSV To Strings`| Converts a CSV string to a collection of strings.<BR> The output of this is intended as input to the `XY Product` node. This uses the standard CSV style notation, like quoted strings|
 |`XY Product`| Takes individual X & Y string collections and outputs the product of these (a collection that has every combination of X and Y) as an `XY Item` collection.<BR> This is then passed into an `iterate` node and each `XY Item` is then passed one at a time into an `XY Expand` node.|
 |`XY Product CSV`| This is two `CSV To Strings` nodes and an `XY Product` node combined into a single node for convenience. Taking X & Y CSV strings and outputting the product of these as an `XY Item` collection.<BR> This is then passed into an `iterate` node and each combination is then passed one at a time into a `XY Expand` node.|
 

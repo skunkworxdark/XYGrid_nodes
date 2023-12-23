@@ -1,5 +1,7 @@
 # 2023 skunkworxdark (https://github.com/skunkworxdark)
 
+import csv
+import io
 import json
 import math
 import re
@@ -103,7 +105,7 @@ def sort_array2(array: list[tuple[str, str, str]]) -> list[tuple[str, str, str]]
     )
 
 
-def shift(arr: np.ndarray, num: int, fill_value: float = 255.0):
+def shift(arr: np.ndarray, num: int, fill_value: float = 255.0) -> np.ndarray:
     result = np.full_like(arr, fill_value)
     if num > 0:
         result[num:] = arr[:-num]
@@ -126,7 +128,7 @@ def get_seam_line(i1: PILImageType, i2: PILImageType, rotate: bool, gutter: int)
     if i2.mode != "L":
         ia2 = np.tensordot(ia2, lc, axes=1)
 
-    #calc difference between images
+    # calc difference between images
     ia = ia2 - ia1
 
     if rotate:
@@ -182,6 +184,20 @@ def seam_mask(i1: PILImageType, i2: PILImageType, rotate: bool, blur_size: int) 
     return mask
 
 
+def csv_line_to_list(csv_string: str) -> list[str]:
+    """Converts the first line of a CSV into a list of strings"""
+
+    reader = csv.reader(io.StringIO(csv_string))
+    return next(reader)
+
+
+def csv_to_list(csv_string: str) -> list[list[str]]:
+    """Converts a CSV into a list of list of strings"""
+
+    reader = csv.reader(io.StringIO(csv_string))
+    return [list(row) for row in reader]
+
+
 @invocation(
     "floats_to_strings",
     title="Floats To Strings",
@@ -235,15 +251,15 @@ class IntsToStringsInvocation(BaseInvocation):
     title="CSV To Strings",
     tags=["xy", "grid", "csv"],
     category="util",
-    version="1.0.1",
+    version="1.1.0",
 )
 class CSVToStringsInvocation(BaseInvocation):
     """Converts a CSV string to a collection of strings"""
 
-    csv: str = InputField(description="csv string")
+    csv_string: str = InputField(description="csv string")
 
     def invoke(self, context: InvocationContext) -> StringCollectionOutput:
-        return StringCollectionOutput(collection=self.csv.split(","))
+        return StringCollectionOutput(collection=csv_line_to_list(self.csv_string))
 
 
 @invocation(
@@ -347,7 +363,7 @@ class XYProductInvocation(BaseInvocation):
     title="XY Product CSV",
     tags=["xy", "grid", "csv"],
     category="grid",
-    version="1.0.0",
+    version="1.0.1",
 )
 class XYProductCSVInvocation(BaseInvocation):
     """Converts X and Y CSV strings to an XY Item collection with every combination of X and Y"""
@@ -356,8 +372,8 @@ class XYProductCSVInvocation(BaseInvocation):
     y: str = InputField(description="y string", ui_component=UIComponent.Textarea)
 
     def invoke(self, context: InvocationContext) -> XYProductOutput:
-        x_list = self.x.split(",")
-        y_list = self.y.split(",")
+        x_list = csv_line_to_list(self.x)
+        y_list = csv_line_to_list(self.y)
         combinations = list(product(x_list, y_list))
         json_combinations = [json.dumps(list(comb)) for comb in combinations]
 
