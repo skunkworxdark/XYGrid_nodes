@@ -36,7 +36,11 @@ from invokeai.app.invocations.fields import (
 )
 from invokeai.app.invocations.image import PIL_RESAMPLING_MAP, PIL_RESAMPLING_MODES
 from invokeai.app.invocations.latent import SchedulerOutput
-from invokeai.app.invocations.model import MainModelField, MainModelLoaderInvocation, ModelLoaderOutput
+from invokeai.app.invocations.model import (
+    MainModelLoaderInvocation,
+    ModelIdentifierField,
+    ModelLoaderOutput,
+)
 from invokeai.app.invocations.primitives import (
     ColorField,
     FloatOutput,
@@ -265,12 +269,12 @@ def csv_to_list(csv_string: str) -> list[list[str]]:
     title="Main Model Input",
     tags=["model"],
     category="model",
-    version="1.0.0",
+    version="1.1.0",
 )
 class MainModelLoaderInputInvocation(MainModelLoaderInvocation):
     """Loads a main model from an input, outputting its submodels."""
 
-    model: MainModelField = InputField(description=FieldDescriptions.main_model)
+    model: ModelIdentifierField = InputField(description=FieldDescriptions.main_model, ui_type=UIType.MainModel)
 
     def invoke(self, context: InvocationContext) -> ModelLoaderOutput:
         return super().invoke(context)
@@ -281,12 +285,12 @@ class MainModelLoaderInputInvocation(MainModelLoaderInvocation):
     title="SDXL Main Model Input",
     tags=["model", "sdxl"],
     category="model",
-    version="1.0.0",
+    version="1.1.0",
 )
 class SDXLModelLoaderInputInvocation(SDXLModelLoaderInvocation):
     """Loads a sdxl model from an input, outputting its submodels."""
 
-    model: MainModelField = InputField(description=FieldDescriptions.main_model, ui_type=UIType.SDXLMainModel)
+    model: ModelIdentifierField = InputField(description=FieldDescriptions.main_model, ui_type=UIType.SDXLMainModel)
 
     def invoke(self, context: InvocationContext) -> SDXLModelLoaderOutput:
         return super().invoke(context)
@@ -296,7 +300,7 @@ class SDXLModelLoaderInputInvocation(SDXLModelLoaderInvocation):
 class StringToModelOutput(BaseInvocationOutput):
     """String to SDXL model output"""
 
-    model: MainModelField = OutputField(description=FieldDescriptions.main_model, title="Model")
+    model: ModelIdentifierField = OutputField(description=FieldDescriptions.main_model, title="Model")
     name: str = OutputField(description="Model Name", title="Name")
 
 
@@ -305,7 +309,7 @@ class StringToModelOutput(BaseInvocationOutput):
     title="String To Main Model",
     tags=["model"],
     category="model",
-    version="1.0.1",
+    version="1.1.0",
 )
 class StringToMainModelInvocation(BaseInvocation):
     """Loads a main model from a json string, outputting its submodels."""
@@ -313,16 +317,15 @@ class StringToMainModelInvocation(BaseInvocation):
     model_string: str = InputField(description="string containing a Model to convert")
 
     def invoke(self, context: InvocationContext) -> StringToModelOutput:
-        model = MainModelField.model_validate_json(self.model_string)
-        model_cfg = context.models.get_config(model.key)
-        return StringToModelOutput(model=model, name=f"{model_cfg.base}: {model_cfg.name}")
+        model = ModelIdentifierField.model_validate_json(self.model_string)
+        return StringToModelOutput(model=model, name=f"{model.base}: {model.name}")
 
 
 @invocation_output("string_to_sdxl_model_output")
 class StringToSDXLModelOutput(BaseInvocationOutput):
     """String to SDXL main model output"""
 
-    model: MainModelField = OutputField(
+    model: ModelIdentifierField = OutputField(
         description=FieldDescriptions.main_model, title="Model", ui_type=UIType.SDXLMainModel
     )
     name: str = OutputField(description="Model Name", title="Name")
@@ -333,7 +336,7 @@ class StringToSDXLModelOutput(BaseInvocationOutput):
     title="String To SDXL Main Model",
     tags=["model", "sdxl"],
     category="model",
-    version="1.0.1",
+    version="1.1.0",
 )
 class StringToSDXLModelInvocation(BaseInvocation):
     """Loads a SDXL model from a json string, outputting its submodels."""
@@ -341,9 +344,8 @@ class StringToSDXLModelInvocation(BaseInvocation):
     model_string: str = InputField(description="string containing a Model to convert")
 
     def invoke(self, context: InvocationContext) -> StringToSDXLModelOutput:
-        model = MainModelField.model_validate_json(self.model_string)
-        model_cfg = context.models.get_config(model.key)
-        return StringToSDXLModelOutput(model=model, name=f"{model_cfg.base}: {model_cfg.name}")
+        model = ModelIdentifierField.model_validate_json(self.model_string)
+        return StringToSDXLModelOutput(model=model, name=f"{model.base}: {model.name}")
 
 
 @invocation(
@@ -351,12 +353,12 @@ class StringToSDXLModelInvocation(BaseInvocation):
     title="Main Model To String",
     tags=["model", "picker"],
     category="model",
-    version="1.0.0",
+    version="1.1.0",
 )
 class MainModelToStringInvocation(BaseInvocation):
     """Converts a Main Model to a JSONString"""
 
-    model: MainModelField = InputField(description=FieldDescriptions.main_model)
+    model: ModelIdentifierField = InputField(description=FieldDescriptions.main_model, ui_type=UIType.MainModel)
 
     def invoke(self, context: InvocationContext) -> StringOutput:
         return StringOutput(value=self.model.model_dump_json())
@@ -367,12 +369,14 @@ class MainModelToStringInvocation(BaseInvocation):
     title="SDXL Model To String",
     tags=["model", "sdxl"],
     category="model",
-    version="1.0.0",
+    version="1.1.0",
 )
 class SDXLModelToStringInvocation(BaseInvocation):
     """Converts an SDXL Model to a JSONString"""
 
-    model: MainModelField = InputField(description=FieldDescriptions.sdxl_main_model, ui_type=UIType.SDXLMainModel)
+    model: ModelIdentifierField = InputField(
+        description=FieldDescriptions.sdxl_main_model, ui_type=UIType.SDXLMainModel
+    )
 
     def invoke(self, context: InvocationContext) -> StringOutput:
         return StringOutput(value=self.model.model_dump_json())
