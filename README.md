@@ -1,5 +1,4 @@
-# XYGrid Nodes for InvokeAI (V3.4+ only)
-
+# `XYGrid_nodes` for InvokeAI
 Discord link:- [XYImage To Grid](https://discord.com/channels/1020123559063990373/1133465385182699582)
 
 Thanks To:<BR>
@@ -25,20 +24,18 @@ The nodes include:
 
 ![CollageExamples](images/collage.png)
 ## Usage
-
-### Install
-
+### <ins>Install</ins><BR>
 There are two options to install the nodes:
 
 1. **Recommended**: Use Git to clone the repo into the `invokeai/nodes` directory. This allows updating via `git pull`.
 
     - In the InvokeAI nodes folder, run:
 
-        For Latest:
+        For Latest Invoke (4.0+):
         ```bash
         git clone https://github.com/skunkworxdark/XYGrid_nodes.git
         ```
-        For Invoke 3.7 version:
+        For Invoke (3.5-3.7):
         ```bash
         git clone https://github.com/skunkworxdark/XYGrid_nodes/tree/invoke-3.7
         ```
@@ -47,16 +44,14 @@ There are two options to install the nodes:
 
 **Important:** If you have a previous version of these nodes (pre-Invoke 3.4) installed in `.env`, delete the old `images_to_grids.py` to avoid errors. Existing workflows may need updating due to node name and parameter changes. See included workflows for examples.
 
-### Update
-
+### <ins>Update</ins><BR>
 Run a `git pull` from the `XYGrid_nodes` folder.
 
 Or run `update.bat` or `update.sh`.
 
 For manual installs, download and replace the files.
 
-### Remove
-
+### <ins>Remove</ins><BR>
 Delete the `XYGrid_nodes` folder. Or rename it to `_XYGrid_nodes` so InvokeAI will ignore it.
 
 
