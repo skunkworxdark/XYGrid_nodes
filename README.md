@@ -34,8 +34,13 @@ There are two options to install the nodes:
 
     - In the InvokeAI nodes folder, run:
 
+        For Latest:
         ```bash
         git clone https://github.com/skunkworxdark/XYGrid_nodes.git
+        ```
+        For Invoke 3.7 version:
+        ```bash
+        git clone https://github.com/skunkworxdark/XYGrid_nodes/tree/invoke-3.7
         ```
 
 2. Manually download [images_to_grids.py](images_to_grids.py) & [__init__.py](__init__.py) then place them in a subfolder under `invokeai/nodes`.  
