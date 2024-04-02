@@ -1,4 +1,4 @@
-# 2023 skunkworxdark (https://github.com/skunkworxdark)
+# 2024 skunkworxdark (https://github.com/skunkworxdark)
 
 import csv
 import io
@@ -8,8 +8,9 @@ import re
 import textwrap
 from itertools import product
 from pathlib import Path
-from typing import Literal, Optional, Union
+from typing import Any, Literal, Union
 
+import cv2
 import numpy as np
 from PIL import Image, ImageDraw, ImageFilter, ImageFont, ImageOps
 from PIL.Image import Image as PILImageType
@@ -18,22 +19,29 @@ import invokeai.assets.fonts as font_assets
 from invokeai.app.invocations.baseinvocation import (
     BaseInvocation,
     BaseInvocationOutput,
-    FieldDescriptions,
     Input,
-    InputField,
     InvocationContext,
-    OutputField,
-    UIComponent,
-    UIType,
-    WithMetadata,
     invocation,
     invocation_output,
 )
+from invokeai.app.invocations.constants import LATENT_SCALE_FACTOR, SCHEDULER_NAME_VALUES
+from invokeai.app.invocations.fields import (
+    FieldDescriptions,
+    InputField,
+    OutputField,
+    UIComponent,
+    UIType,
+    WithBoard,
+    WithMetadata,
+)
 from invokeai.app.invocations.image import PIL_RESAMPLING_MAP, PIL_RESAMPLING_MODES
-from invokeai.app.invocations.latent import SAMPLER_NAME_VALUES, SchedulerOutput
-from invokeai.app.invocations.model import MainModelField, MainModelLoaderInvocation, ModelLoaderOutput
+from invokeai.app.invocations.latent import SchedulerOutput
+from invokeai.app.invocations.model import (
+    MainModelLoaderInvocation,
+    ModelIdentifierField,
+    ModelLoaderOutput,
+)
 from invokeai.app.invocations.primitives import (
-    BoardField,
     ColorField,
     FloatOutput,
     ImageCollectionOutput,
@@ -44,12 +52,10 @@ from invokeai.app.invocations.primitives import (
     LatentsOutput,
     StringCollectionOutput,
     StringOutput,
-    build_latents_output,
 )
 from invokeai.app.invocations.sdxl import SDXLModelLoaderInvocation, SDXLModelLoaderOutput
-from invokeai.app.services.image_records.image_records_common import ImageCategory, ResourceOrigin
 
-_downsampling_factor = 8
+_downsampling_factor = LATENT_SCALE_FACTOR
 
 # numeric pattern
 # - ^s* - start of line then any whitespace
@@ -108,7 +114,7 @@ def sort_array2(array: list[tuple[str, str, str]]) -> list[tuple[str, str, str]]
     )
 
 
-def shift(arr: np.ndarray, num: int, fill_value: float = 255.0) -> np.ndarray:
+def shift(arr: np.ndarray[Any, Any], num: int, fill_value: float = 255.0) -> np.ndarray[Any, Any]:
     result = np.full_like(arr, fill_value)
     if num > 0:
         result[num:] = arr[:-num]
@@ -119,9 +125,26 @@ def shift(arr: np.ndarray, num: int, fill_value: float = 255.0) -> np.ndarray:
     return result
 
 
-def get_seam_line(i1: PILImageType, i2: PILImageType, rotate: bool, gutter: int) -> PILImageType:
-    ia1 = np.array(i1.convert("RGB")) / 255.0
+BLEND_MODES = Literal[
+    "Linear",
+    "seam-grad",
+    "seam-sobel1",
+    "seam-sobel3",
+    "seam-sobel5",
+    "seam-sobel7",
+    "seam-scharr",
+]
 
+
+def get_seam_line(
+    i1: PILImageType,
+    i2: PILImageType,
+    rotate: bool,
+    gutter: int,
+    search_size: int = 1,
+    blend_mode: BLEND_MODES = "seam-grad",
+) -> PILImageType:
+    ia1 = np.array(i1.convert("RGB")) / 255.0
     # BT.601 luminance conversion
     lc = np.array([0.2989, 0.5870, 0.1140])
     if i1.mode != "L":
@@ -142,7 +165,40 @@ def get_seam_line(i1: PILImageType, i2: PILImageType, rotate: bool, gutter: int)
     max_x -= gutter
     min_x = gutter
 
-    energy = np.abs(np.gradient(ia, axis=0)) + np.abs(np.gradient(ia, axis=1))
+    if blend_mode == "seam-sobel1":
+        # Use Sobel operator for energy calculation
+        # gx = cv2.Sobel(ia, cv2.CV_64F, 1, 0, ksize=1)
+        gx = cv2.Sobel(ia, -1, 1, 0, ksize=1)
+        gy = cv2.Sobel(ia, -1, 0, 1, ksize=1)
+        energy = np.hypot(gx, gy)
+    elif blend_mode == "seam-sobel3":
+        # Use Sobel operator for energy calculation
+        gx = cv2.Sobel(ia, -1, 1, 0, ksize=3)
+        gy = cv2.Sobel(ia, -1, 0, 1, ksize=3)
+        energy = np.hypot(gx, gy)
+    elif blend_mode == "seam-sobel5":
+        # Use Sobel operator for energy calculation
+        gx = cv2.Sobel(ia, -1, 1, 0, ksize=5)
+        gy = cv2.Sobel(ia, -1, 0, 1, ksize=5)
+        energy = np.hypot(gx, gy)
+    elif blend_mode == "seam-sobel7":
+        # Use Sobel operator for energy calculation
+        gx = cv2.Sobel(ia, -1, 1, 0, ksize=7)
+        gy = cv2.Sobel(ia, -1, 0, 1, ksize=7)
+        energy = np.hypot(gx, gy)
+    elif blend_mode == "seam-scharr":
+        # Use Sobel operator for energy calculation
+        gx = cv2.Scharr(ia, -1, 1, 0)
+        gy = cv2.Scharr(ia, -1, 0, 1)
+        energy = np.hypot(gx, gy)
+    elif blend_mode == "seam-grad":
+        # Calc the energy in the difference
+        energy = np.abs(np.gradient(ia, axis=0)) + np.abs(np.gradient(ia, axis=1))
+    else:
+        raise ValueError(f"Unsupported blend mode: '{blend_mode}'.")
+
+    ie = Image.fromarray((energy * 255.0).astype("uint8"))
+    print(f"energy{ie.size}")
 
     res = np.copy(energy)
 
@@ -158,8 +214,8 @@ def get_seam_line(i1: PILImageType, i2: PILImageType, rotate: bool, gutter: int)
 
     for ypos in range(max_y - 2, -1, -1):
         lowest_pos = lowest_energy_line[ypos + 1]
-        lpos = lowest_pos - 1
-        rpos = lowest_pos + 1
+        lpos = lowest_pos - search_size
+        rpos = lowest_pos + search_size
         lpos = np.clip(lpos, min_x, max_x - 1)
         rpos = np.clip(rpos, min_x, max_x - 1)
         lowest_energy_line[ypos] = np.argmin(energy[ypos, lpos : rpos + 1]) + lpos
@@ -178,8 +234,15 @@ def get_seam_line(i1: PILImageType, i2: PILImageType, rotate: bool, gutter: int)
     return image
 
 
-def seam_mask(i1: PILImageType, i2: PILImageType, rotate: bool, blur_size: int) -> PILImageType:
-    seam = get_seam_line(i1, i2, rotate, blur_size + 1)
+def seam_mask(
+    i1: PILImageType,
+    i2: PILImageType,
+    rotate: bool,
+    blur_size: int,
+    search_size: int = 1,
+    blend_mode: BLEND_MODES = "seam-grad",
+) -> PILImageType:
+    seam = get_seam_line(i1, i2, rotate, blur_size + 1, search_size=search_size, blend_mode=blend_mode)
     #    blur = ImageFilter.GaussianBlur(float(blur_size))
     blur = ImageFilter.BoxBlur(float(blur_size))
     mask = seam.filter(blur)
@@ -206,12 +269,12 @@ def csv_to_list(csv_string: str) -> list[list[str]]:
     title="Main Model Input",
     tags=["model"],
     category="model",
-    version="1.0.0",
+    version="1.1.0",
 )
 class MainModelLoaderInputInvocation(MainModelLoaderInvocation):
     """Loads a main model from an input, outputting its submodels."""
 
-    model: MainModelField = InputField(description=FieldDescriptions.main_model)
+    model: ModelIdentifierField = InputField(description=FieldDescriptions.main_model, ui_type=UIType.MainModel)
 
     def invoke(self, context: InvocationContext) -> ModelLoaderOutput:
         return super().invoke(context)
@@ -222,12 +285,12 @@ class MainModelLoaderInputInvocation(MainModelLoaderInvocation):
     title="SDXL Main Model Input",
     tags=["model", "sdxl"],
     category="model",
-    version="1.0.0",
+    version="1.1.0",
 )
 class SDXLModelLoaderInputInvocation(SDXLModelLoaderInvocation):
     """Loads a sdxl model from an input, outputting its submodels."""
 
-    model: MainModelField = InputField(description=FieldDescriptions.main_model, ui_type=UIType.SDXLMainModel)
+    model: ModelIdentifierField = InputField(description=FieldDescriptions.main_model, ui_type=UIType.SDXLMainModel)
 
     def invoke(self, context: InvocationContext) -> SDXLModelLoaderOutput:
         return super().invoke(context)
@@ -237,7 +300,7 @@ class SDXLModelLoaderInputInvocation(SDXLModelLoaderInvocation):
 class StringToModelOutput(BaseInvocationOutput):
     """String to SDXL model output"""
 
-    model: MainModelField = OutputField(description=FieldDescriptions.main_model, title="Model")
+    model: ModelIdentifierField = OutputField(description=FieldDescriptions.main_model, title="Model")
     name: str = OutputField(description="Model Name", title="Name")
 
 
@@ -246,7 +309,7 @@ class StringToModelOutput(BaseInvocationOutput):
     title="String To Main Model",
     tags=["model"],
     category="model",
-    version="1.0.0",
+    version="1.1.0",
 )
 class StringToMainModelInvocation(BaseInvocation):
     """Loads a main model from a json string, outputting its submodels."""
@@ -254,15 +317,15 @@ class StringToMainModelInvocation(BaseInvocation):
     model_string: str = InputField(description="string containing a Model to convert")
 
     def invoke(self, context: InvocationContext) -> StringToModelOutput:
-        model = MainModelField.model_validate_json(self.model_string)
-        return StringToModelOutput(model=model, name=f"{model.base_model}: {model.model_name}")
+        model = ModelIdentifierField.model_validate_json(self.model_string)
+        return StringToModelOutput(model=model, name=f"{model.base}: {model.name}")
 
 
 @invocation_output("string_to_sdxl_model_output")
 class StringToSDXLModelOutput(BaseInvocationOutput):
     """String to SDXL main model output"""
 
-    model: MainModelField = OutputField(
+    model: ModelIdentifierField = OutputField(
         description=FieldDescriptions.main_model, title="Model", ui_type=UIType.SDXLMainModel
     )
     name: str = OutputField(description="Model Name", title="Name")
@@ -273,7 +336,7 @@ class StringToSDXLModelOutput(BaseInvocationOutput):
     title="String To SDXL Main Model",
     tags=["model", "sdxl"],
     category="model",
-    version="1.0.0",
+    version="1.1.0",
 )
 class StringToSDXLModelInvocation(BaseInvocation):
     """Loads a SDXL model from a json string, outputting its submodels."""
@@ -281,8 +344,8 @@ class StringToSDXLModelInvocation(BaseInvocation):
     model_string: str = InputField(description="string containing a Model to convert")
 
     def invoke(self, context: InvocationContext) -> StringToSDXLModelOutput:
-        model = MainModelField.model_validate_json(self.model_string)
-        return StringToSDXLModelOutput(model=model, name=f"{model.base_model}: {model.model_name}")
+        model = ModelIdentifierField.model_validate_json(self.model_string)
+        return StringToSDXLModelOutput(model=model, name=f"{model.base}: {model.name}")
 
 
 @invocation(
@@ -290,12 +353,12 @@ class StringToSDXLModelInvocation(BaseInvocation):
     title="Main Model To String",
     tags=["model", "picker"],
     category="model",
-    version="1.0.0",
+    version="1.1.0",
 )
 class MainModelToStringInvocation(BaseInvocation):
     """Converts a Main Model to a JSONString"""
 
-    model: MainModelField = InputField(description=FieldDescriptions.main_model)
+    model: ModelIdentifierField = InputField(description=FieldDescriptions.main_model, ui_type=UIType.MainModel)
 
     def invoke(self, context: InvocationContext) -> StringOutput:
         return StringOutput(value=self.model.model_dump_json())
@@ -306,12 +369,14 @@ class MainModelToStringInvocation(BaseInvocation):
     title="SDXL Model To String",
     tags=["model", "sdxl"],
     category="model",
-    version="1.0.0",
+    version="1.1.0",
 )
 class SDXLModelToStringInvocation(BaseInvocation):
     """Converts an SDXL Model to a JSONString"""
 
-    model: MainModelField = InputField(description=FieldDescriptions.sdxl_main_model, ui_type=UIType.SDXLMainModel)
+    model: ModelIdentifierField = InputField(
+        description=FieldDescriptions.sdxl_main_model, ui_type=UIType.SDXLMainModel
+    )
 
     def invoke(self, context: InvocationContext) -> StringOutput:
         return StringOutput(value=self.model.model_dump_json())
@@ -322,13 +387,15 @@ class SDXLModelToStringInvocation(BaseInvocation):
     title="Scheduler To String",
     tags=["scheduler"],
     category="model",
-    version="1.0.0",
+    version="1.0.1",
 )
 class SchedulerToStringInvocation(BaseInvocation):
     """Converts a Scheduler to a string"""
 
-    scheduler: SAMPLER_NAME_VALUES = InputField(
-        default="euler", description=FieldDescriptions.scheduler, ui_type=UIType.Scheduler
+    scheduler: SCHEDULER_NAME_VALUES = InputField(
+        default="euler",
+        description=FieldDescriptions.scheduler,
+        ui_type=UIType.Scheduler,
     )
 
     def invoke(self, context: InvocationContext) -> StringOutput:
@@ -420,7 +487,7 @@ class StringToFloatInvocation(BaseInvocation):
     title="Percent To Float",
     tags=["float", "percentage"],
     category="string",
-    version="1.0.0",
+    version="1.0.1",
 )
 class PercentToFloatInvocation(BaseInvocation):
     """Converts a string to a float and divides it by 100."""
@@ -430,7 +497,7 @@ class PercentToFloatInvocation(BaseInvocation):
         description="Input text",
     )
 
-    def invoke(self, context) -> FloatOutput:
+    def invoke(self, context: InvocationContext) -> FloatOutput:
         output = float(prep_num(self.text)) / 100
         return FloatOutput(value=output)
 
@@ -560,7 +627,7 @@ class XYImageExpandOutput(BaseInvocationOutput):
     title="XYImage Expand",
     tags=["xy", "grid"],
     category="grid",
-    version="1.1.0",
+    version="1.1.1",
 )
 class XYImageExpandInvocation(BaseInvocation):
     """Takes an XYImage item and outputs the XItem,YItem, Image, width & height"""
@@ -572,7 +639,7 @@ class XYImageExpandInvocation(BaseInvocation):
         x_item = str(lst[0]) if len(lst) > 0 else ""
         y_item = str(lst[1]) if len(lst) > 1 else ""
         image_name = str(lst[2]) if len(lst) > 2 else ""
-        image = context.services.images.get_pil_image(image_name)
+        image = context.images.get_pil(image_name)
 
         return XYImageExpandOutput(
             x_item=x_item,
@@ -606,12 +673,12 @@ class XYImageCollectInvocation(BaseInvocation):
     title="XYImages To Grid",
     tags=["xy", "grid", "image"],
     category="grid",
-    version="1.2.0",
+    version="1.3.0",
 )
-class XYImagesToGridInvocation(BaseInvocation, WithMetadata):
+class XYImagesToGridInvocation(BaseInvocation, WithMetadata, WithBoard):
     """Takes Collection of XYImages (json of (x_item,y_item,image_name)array), sorts the images into X,Y and creates a grid image with labels"""
 
-    board: Optional[BoardField] = InputField(default=None, description=FieldDescriptions.board, input=Input.Direct)
+    #    board: Optional[BoardField] = InputField(default=None, description=FieldDescriptions.board, input=Input.Direct)
     xyimages: list[str] = InputField(
         default=[],
         description="The XYImage item Collection",
@@ -638,7 +705,7 @@ class XYImagesToGridInvocation(BaseInvocation, WithMetadata):
         left_label_width = self.left_label_width
         new_array = [json.loads(s) for s in self.xyimages]
         sorted_array = sort_array2(new_array)
-        images = [context.services.images.get_pil_image(item[2]) for item in sorted_array]
+        images = [context.images.get_pil(item[2]) for item in sorted_array]
         x_labels = sort_array(list({item[0] for item in sorted_array}))
         y_labels = sort_array(list({item[1] for item in sorted_array}))
         columns = len(x_labels)
@@ -711,23 +778,9 @@ class XYImagesToGridInvocation(BaseInvocation, WithMetadata):
                 x += column_width
             y += row_height
 
-        image_dto = context.services.images.create(
-            image=output_image,
-            image_origin=ResourceOrigin.INTERNAL,
-            image_category=ImageCategory.GENERAL,
-            board_id=self.board.board_id if self.board else None,
-            node_id=self.id,
-            session_id=context.graph_execution_state_id,
-            is_intermediate=self.is_intermediate,
-            metadata=self.metadata,
-            workflow=context.workflow,
-        )
+        image_dto = context.images.save(output_image)
 
-        return ImageOutput(
-            image=ImageField(image_name=image_dto.image_name),
-            width=image_dto.width,
-            height=image_dto.height,
-        )
+        return ImageOutput.build(image_dto)
 
 
 @invocation(
@@ -735,12 +788,12 @@ class XYImagesToGridInvocation(BaseInvocation, WithMetadata):
     title="Images To Grids",
     tags=["grid", "image"],
     category="grid",
-    version="1.2.0",
+    version="1.3.0",
 )
-class ImagesToGridsInvocation(BaseInvocation, WithMetadata):
+class ImagesToGridsInvocation(BaseInvocation, WithMetadata, WithBoard):
     """Takes a collection of images and outputs a collection of generated grid images"""
 
-    board: Optional[BoardField] = InputField(default=None, description=FieldDescriptions.board, input=Input.Direct)
+    #    board: Optional[BoardField] = InputField(default=None, description=FieldDescriptions.board, input=Input.Direct)
     images: list[ImageField] = InputField(
         default=[],
         description="The image collection to turn into grids",
@@ -776,7 +829,7 @@ class ImagesToGridsInvocation(BaseInvocation, WithMetadata):
 
     def invoke(self, context: InvocationContext) -> ImageCollectionOutput:
         """Convert an image list into a grids of images"""
-        images = [context.services.images.get_pil_image(image.image_name) for image in self.images]
+        images = [context.images.get_pil(image.image_name) for image in self.images]
         column_width = int(max([image.width for image in images]) * self.scale_factor)
         row_height = int(max([image.height for image in images]) * self.scale_factor)
         output_width = column_width * self.columns + (self.space * (self.columns - 1))
@@ -788,7 +841,7 @@ class ImagesToGridsInvocation(BaseInvocation, WithMetadata):
         x_offset = 0
         y_offset = 0
         output_image = Image.new("RGBA", (output_width, output_height), self.background_color.tuple())
-        grid_images = []
+        grid_images: list[ImageField] = []
 
         for image in images:
             if not self.scale_factor == 1.0:
@@ -813,17 +866,7 @@ class ImagesToGridsInvocation(BaseInvocation, WithMetadata):
             if row >= self.rows:
                 row = 0
                 y_offset = 0
-                image_dto = context.services.images.create(
-                    image=output_image,
-                    image_origin=ResourceOrigin.INTERNAL,
-                    image_category=ImageCategory.GENERAL,
-                    board_id=self.board.board_id if self.board else None,
-                    node_id=self.id,
-                    session_id=context.graph_execution_state_id,
-                    is_intermediate=self.is_intermediate,
-                    metadata=self.metadata,
-                    workflow=context.workflow,
-                )
+                image_dto = context.images.save(output_image)
                 grid_images.append(ImageField(image_name=image_dto.image_name))
                 output_image = Image.new(
                     "RGBA",
@@ -833,17 +876,7 @@ class ImagesToGridsInvocation(BaseInvocation, WithMetadata):
 
         # if we are not on column and row 0 then we have a part done grid and need to save it
         if column > 0 or row > 0:
-            image_dto = context.services.images.create(
-                image=output_image,
-                image_origin=ResourceOrigin.INTERNAL,
-                image_category=ImageCategory.GENERAL,
-                board_id=self.board.board_id if self.board else None,
-                node_id=self.id,
-                session_id=context.graph_execution_state_id,
-                is_intermediate=self.is_intermediate,
-                metadata=self.metadata,
-                workflow=context.workflow,
-            )
+            image_dto = context.images.save(output_image)
             grid_images.append(ImageField(image_name=image_dto.image_name))
 
         return ImageCollectionOutput(collection=grid_images)
@@ -854,7 +887,7 @@ class ImagesToGridsInvocation(BaseInvocation, WithMetadata):
     title="Image To XYImage Collection",
     tags=["xy", "grid", "image"],
     category="grid",
-    version="1.1.0",
+    version="1.1.1",
 )
 class ImageToXYImageCollectionInvocation(BaseInvocation, WithMetadata):
     """Cuts an image up into columns and rows and outputs XYImage Collection"""
@@ -865,11 +898,11 @@ class ImageToXYImageCollectionInvocation(BaseInvocation, WithMetadata):
     rows: int = InputField(default=2, ge=2, le=256, description="The number of rows")
 
     def invoke(self, context: InvocationContext) -> StringCollectionOutput:
-        img = context.services.images.get_pil_image(self.image.image_name)
+        img = context.images.get_pil(self.image.image_name)
 
         dy = img.height // self.rows
         dx = img.width // self.columns
-        xyimages = []
+        xyimages: list[str] = []
 
         for iy in range(self.rows):
             for ix in range(self.columns):
@@ -877,16 +910,7 @@ class ImageToXYImageCollectionInvocation(BaseInvocation, WithMetadata):
                 y = iy * dy
                 box = (x, y, x + dx, y + dy)
                 img_crop = img.crop(box)
-                image_dto = context.services.images.create(
-                    image=img_crop,
-                    image_origin=ResourceOrigin.INTERNAL,
-                    image_category=ImageCategory.OTHER,
-                    node_id=self.id,
-                    session_id=context.graph_execution_state_id,
-                    is_intermediate=self.is_intermediate,
-                    metadata=self.metadata,
-                    workflow=context.workflow,
-                )
+                image_dto = context.images.save(img_crop)
                 xyimages.append(json.dumps([str(x), str(y), image_dto.image_name]))
 
         return StringCollectionOutput(collection=xyimages)
@@ -904,7 +928,7 @@ class TilesOutput(BaseInvocationOutput):
     title="Default XYImage Tile Generator",
     tags=["xy", "tile"],
     category="tile",
-    version="1.1.0",
+    version="1.1.1",
 )
 class DefaultXYTileGenerator(BaseInvocation):
     """Cuts up an image into overlapping tiles and outputs a string representation of the tiles to use"""
@@ -935,7 +959,7 @@ class DefaultXYTileGenerator(BaseInvocation):
     )
 
     def invoke(self, context: InvocationContext) -> TilesOutput:
-        img = context.services.images.get_pil_image(self.image.image_name)
+        img = context.images.get_pil(self.image.image_name)
 
         if self.adjust_tile_size:
             tiles_x = img.width // self.tile_width
@@ -955,7 +979,7 @@ class DefaultXYTileGenerator(BaseInvocation):
         x_tiles = math.ceil(((img.width - self.overlap) / dx))
         y_tiles = math.ceil(((img.height - self.overlap) / dy))
 
-        xytiles = []
+        xytiles: list[str] = []
         xytiles.append(json.dumps(str(self.image.image_name)))
 
         for iy in range(y_tiles):
@@ -987,7 +1011,7 @@ class DefaultXYTileGenerator(BaseInvocation):
     title="Minimum Overlap XYImage Tile Generator",
     tags=["xy", "tile"],
     category="tile",
-    version="1.1.0",
+    version="1.1.1",
 )
 class MinimumOverlapXYTileGenerator(BaseInvocation):
     """Cuts up an image into overlapping tiles and outputs a string representation of the tiles to use, taking the
@@ -1019,7 +1043,7 @@ class MinimumOverlapXYTileGenerator(BaseInvocation):
     )
 
     def invoke(self, context: InvocationContext) -> TilesOutput:
-        img = context.services.images.get_pil_image(self.image.image_name)
+        img = context.images.get_pil(self.image.image_name)
 
         if img.width < self.tile_width:
             self.tile_width = img.width
@@ -1038,7 +1062,7 @@ class MinimumOverlapXYTileGenerator(BaseInvocation):
             else 1
         )
 
-        xytiles = []
+        xytiles: list[str] = []
         xytiles.append(json.dumps(str(self.image.image_name)))
 
         for yiter in range(num_tiles_h):
@@ -1062,7 +1086,7 @@ class MinimumOverlapXYTileGenerator(BaseInvocation):
     title="Even Split XYImage Tile Generator",
     tags=["xy", "tile"],
     category="tile",
-    version="1.1.0",
+    version="1.1.1",
 )
 class EvenSplitXYTileGenerator(BaseInvocation):
     """Cuts up an image into a number of even sized tiles with the overlap been a percentage of the tile size and outputs a string representation of the tiles to use"""
@@ -1087,7 +1111,7 @@ class EvenSplitXYTileGenerator(BaseInvocation):
     )
 
     def invoke(self, context: InvocationContext) -> TilesOutput:
-        img = context.services.images.get_pil_image(self.image.image_name)
+        img = context.images.get_pil(self.image.image_name)
 
         # Ensure tile size is divisible by 8
         if img.width % 8 != 0 or img.height % 8 != 0:
@@ -1113,7 +1137,7 @@ class EvenSplitXYTileGenerator(BaseInvocation):
         if tile_size_y % 8 != 0:
             tile_size_y = 8 * ((tile_size_y) // 8)
 
-        xytiles = []
+        xytiles: list[str] = []
         xytiles.append(json.dumps(str(self.image.image_name)))
 
         for yi in range(self.num_y_tiles):
@@ -1150,7 +1174,7 @@ class ImageToXYImageTilesOutput(BaseInvocationOutput):
     title="Image To XYImage Tiles",
     tags=["xy", "tile", "image"],
     category="tile",
-    version="1.3.0",
+    version="1.3.1",
 )
 class ImageToXYImageTilesInvocation(BaseInvocation):
     """Cuts an image up into overlapping tiles and outputs as an XYImage Collection (x,y is the final position of the tile)"""
@@ -1162,33 +1186,19 @@ class ImageToXYImageTilesInvocation(BaseInvocation):
         tiles = self.tiles.copy()
 
         image_name = json.loads(tiles.pop(0))
-        img = context.services.images.get_pil_image(image_name)
+        img = context.images.get_pil(image_name)
 
-        xyimages = []
+        xyimages: list[str] = []
 
         for item in tiles:
             x1, y1, x2, y2 = [int(i) for i in json.loads(item)]
 
             box = (x1, y1, x2, y2)
             img_crop = img.crop(box)
-            image_dto = context.services.images.create(
-                image=img_crop,
-                image_origin=ResourceOrigin.INTERNAL,
-                image_category=ImageCategory.OTHER,
-                node_id=self.id,
-                session_id=context.graph_execution_state_id,
-                is_intermediate=self.is_intermediate,
-                workflow=context.workflow,
-            )
+            image_dto = context.images.save(img_crop)
             xyimages.append(json.dumps([str(x1), str(y1), image_dto.image_name]))
 
         return ImageToXYImageTilesOutput(xyImages=xyimages)
-
-
-BLEND_MODES = Literal[
-    "Linear",
-    "Smart",
-]
 
 
 @invocation(
@@ -1196,18 +1206,18 @@ BLEND_MODES = Literal[
     title="XYImage Tiles To Image",
     tags=["xy", "tile", "image"],
     category="tile",
-    version="1.2.0",
+    version="1.3.0",
 )
-class XYImageTilesToImageInvocation(BaseInvocation, WithMetadata):
+class XYImageTilesToImageInvocation(BaseInvocation, WithMetadata, WithBoard):
     """Takes a collection of XYImage Tiles (json of array(x_pos,y_pos,image_name)) and create an image from overlapping tiles"""
 
-    board: Optional[BoardField] = InputField(default=None, description=FieldDescriptions.board, input=Input.Direct)
+    #    board: Optional[BoardField] = InputField(default=None, description=FieldDescriptions.board, input=Input.Direct)
     xyimages: list[str] = InputField(
         default=[],
         description="The xyImage Collection",
     )
     blend_mode: BLEND_MODES = InputField(
-        default="Smart",
+        default="seam-grad",
         description="Seam blending type Linear or Smart",
         input=Input.Direct,
     )
@@ -1216,11 +1226,17 @@ class XYImageTilesToImageInvocation(BaseInvocation, WithMetadata):
         ge=0,
         description="Size of the blur & Gutter to use with Smart Seam",
     )
+    search_size: int = InputField(
+        default=1,
+        ge=1,
+        description="Seam search size in pixels 1-4 are sensible sizes",
+        input=Input.Direct,
+    )
 
     def invoke(self, context: InvocationContext) -> ImageOutput:
         new_array = [json.loads(s) for s in self.xyimages]
         sorted_array = sort_array2(new_array)
-        images = [context.services.images.get_pil_image(item[2]) for item in sorted_array]
+        images = [context.images.get_pil(item[2]) for item in sorted_array]
         x_coords = sort_array(list({item[0] for item in sorted_array}))
         columns = len(x_coords)
         y_coords = sort_array(list({item[1] for item in sorted_array}))
@@ -1248,18 +1264,15 @@ class XYImageTilesToImageInvocation(BaseInvocation, WithMetadata):
             if overlap_x > 0:
                 # blend X
                 x_img1 = images[ix - 1].crop(
-                    (
-                        images[ix - 1].width - overlap_x,
-                        0,
-                        images[ix - 1].width,
-                        images[ix - 1].height,
-                    )
+                    (images[ix - 1].width - overlap_x, 0, images[ix - 1].width, images[ix - 1].height)
                 )
                 x_img2 = images[ix].crop((0, 0, overlap_x, images[ix].height))
                 if self.blend_mode == "Linear":
                     x_img1.paste(x_img2, (0, 0), gx.resize((overlap_x, images[ix].height)))
                 else:
-                    mask = seam_mask(x_img1, x_img2, False, self.blur_size)
+                    mask = seam_mask(
+                        x_img1, x_img2, False, self.blur_size, search_size=self.search_size, blend_mode=self.blend_mode
+                    )
                     x_img1.paste(x_img2, (0, 0), mask)
                 row_image.paste(x_img1, (x, 0))
         output_image.paste(row_image, (0, 0))
@@ -1289,13 +1302,16 @@ class XYImageTilesToImageInvocation(BaseInvocation, WithMetadata):
                     )
                     x_img2 = images[iy_off + ix].crop((0, 0, overlap_x, images[iy_off + ix].height))
                     if self.blend_mode == "Linear":
-                        x_img1.paste(
-                            x_img2,
-                            (0, 0),
-                            gx.resize((overlap_x, images[iy_off + ix].height)),
-                        )
+                        x_img1.paste(x_img2, (0, 0), gx.resize((overlap_x, images[iy_off + ix].height)))
                     else:
-                        mask = seam_mask(x_img1, x_img2, False, self.blur_size)
+                        mask = seam_mask(
+                            x_img1,
+                            x_img2,
+                            False,
+                            self.blur_size,
+                            search_size=self.search_size,
+                            blend_mode=self.blend_mode,
+                        )
                         x_img1.paste(x_img2, (0, 0), mask)
                     row_image_new.paste(x_img1, (x, 0))
             y = int(y_coords[iy])
@@ -1309,30 +1325,18 @@ class XYImageTilesToImageInvocation(BaseInvocation, WithMetadata):
                 if self.blend_mode == "Linear":
                     y_img1.paste(y_img2, (0, 0), gy.resize((output_width, overlap_y)))
                 else:
-                    mask = seam_mask(y_img1, y_img2, True, self.blur_size)
+                    mask = seam_mask(
+                        y_img1, y_img2, True, self.blur_size, search_size=self.search_size, blend_mode=self.blend_mode
+                    )
                     y_img1.paste(y_img2, (0, 0), mask)
                 row_image_new.paste(y_img1, (0, 0))
                 output_image.paste(row_image_new, (0, y))
             row_image = row_image_new
 
         # Save the image
-        image_dto = context.services.images.create(
-            image=output_image,
-            image_origin=ResourceOrigin.INTERNAL,
-            image_category=ImageCategory.GENERAL,
-            board_id=self.board.board_id if self.board else None,
-            node_id=self.id,
-            session_id=context.graph_execution_state_id,
-            is_intermediate=self.is_intermediate,
-            metadata=self.metadata,
-            workflow=context.workflow,
-        )
+        image_dto = context.images.save(output_image)
 
-        return ImageOutput(
-            image=ImageField(image_name=image_dto.image_name),
-            width=image_dto.width,
-            height=image_dto.height,
-        )
+        return ImageOutput.build(image_dto)
 
 
 @invocation(
@@ -1340,7 +1344,7 @@ class XYImageTilesToImageInvocation(BaseInvocation, WithMetadata):
     title="Crop Latents",
     tags=["latents", "crop"],
     category="latents",
-    version="1.0.0",
+    version="1.0.1",
 )
 class CropLatentsInvocation(BaseInvocation):
     """Crops latents"""
@@ -1371,7 +1375,7 @@ class CropLatentsInvocation(BaseInvocation):
     )
 
     def invoke(self, context: InvocationContext) -> LatentsOutput:
-        latents = context.services.latents.get(self.latents.latents_name)
+        latents = context.tensors.load(self.latents.latents_name)
 
         x1 = self.x_offset // _downsampling_factor
         y1 = self.y_offset // _downsampling_factor
@@ -1382,7 +1386,6 @@ class CropLatentsInvocation(BaseInvocation):
 
         # resized_latents = resized_latents.to("cpu")
 
-        name = f"{context.graph_execution_state_id}__{self.id}"
-        context.services.latents.save(name, cropped_latents)
+        name = context.tensors.save(tensor=cropped_latents)
 
-        return build_latents_output(latents_name=name, latents=cropped_latents)
+        return LatentsOutput.build(latents_name=name, latents=cropped_latents)
