@@ -4,10 +4,10 @@ import csv
 import io
 import json
 import math
+import os
 import re
 import textwrap
 from itertools import product
-from pathlib import Path
 from typing import Any, Literal, Union
 
 import cv2
@@ -15,45 +15,39 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFilter, ImageFont, ImageOps
 from PIL.Image import Image as PILImageType
 
-import invokeai.assets.fonts as font_assets
-from invokeai.app.invocations.baseinvocation import (
+from invokeai.app.invocations.constants import LATENT_SCALE_FACTOR
+from invokeai.app.invocations.image import PIL_RESAMPLING_MAP, PIL_RESAMPLING_MODES
+from invokeai.app.invocations.model import MainModelLoaderInvocation
+from invokeai.app.invocations.sdxl import SDXLModelLoaderInvocation, SDXLModelLoaderOutput
+from invokeai.invocation_api import (
+    SCHEDULER_NAME_VALUES,
     BaseInvocation,
     BaseInvocationOutput,
-    Input,
-    InvocationContext,
-    invocation,
-    invocation_output,
-)
-from invokeai.app.invocations.constants import LATENT_SCALE_FACTOR, SCHEDULER_NAME_VALUES
-from invokeai.app.invocations.fields import (
-    FieldDescriptions,
-    InputField,
-    OutputField,
-    UIComponent,
-    UIType,
-    WithBoard,
-    WithMetadata,
-)
-from invokeai.app.invocations.image import PIL_RESAMPLING_MAP, PIL_RESAMPLING_MODES
-from invokeai.app.invocations.latent import SchedulerOutput
-from invokeai.app.invocations.model import (
-    MainModelLoaderInvocation,
-    ModelIdentifierField,
-    ModelLoaderOutput,
-)
-from invokeai.app.invocations.primitives import (
     ColorField,
+    FieldDescriptions,
     FloatOutput,
     ImageCollectionOutput,
     ImageField,
     ImageOutput,
+    Input,
+    InputField,
     IntegerOutput,
+    InvocationContext,
     LatentsField,
     LatentsOutput,
+    ModelIdentifierField,
+    ModelLoaderOutput,
+    OutputField,
+    SchedulerOutput,
     StringCollectionOutput,
     StringOutput,
+    UIComponent,
+    UIType,
+    WithBoard,
+    WithMetadata,
+    invocation,
+    invocation_output,
 )
-from invokeai.app.invocations.sdxl import SDXLModelLoaderInvocation, SDXLModelLoaderOutput
 
 _downsampling_factor = LATENT_SCALE_FACTOR
 
@@ -252,16 +246,9 @@ def seam_mask(
 
 def csv_line_to_list(csv_string: str) -> list[str]:
     """Converts the first line of a CSV into a list of strings"""
-
-    reader = csv.reader(io.StringIO(csv_string))
-    return next(reader)
-
-
-def csv_to_list(csv_string: str) -> list[list[str]]:
-    """Converts a CSV into a list of list of strings"""
-
-    reader = csv.reader(io.StringIO(csv_string))
-    return [list(row) for row in reader]
+    with io.StringIO(csv_string) as input:
+        reader = csv.reader(input)
+        return next(reader)
 
 
 @invocation(
@@ -407,7 +394,7 @@ class SchedulerToStringInvocation(BaseInvocation):
     title="Floats To Strings",
     tags=["float", "string"],
     category="util",
-    version="1.0.0",
+    version="1.0.1",
 )
 class FloatsToStringsInvocation(BaseInvocation):
     """Converts a float or collections of floats to a collection of strings"""
@@ -419,8 +406,6 @@ class FloatsToStringsInvocation(BaseInvocation):
     )
 
     def invoke(self, context: InvocationContext) -> StringCollectionOutput:
-        if self.floats is None:
-            raise Exception("No float or collection of floats provided")
         return StringCollectionOutput(
             collection=[str(x) for x in self.floats] if isinstance(self.floats, list) else [str(self.floats)]
         )
@@ -431,7 +416,7 @@ class FloatsToStringsInvocation(BaseInvocation):
     title="Ints To Strings",
     tags=["int", "string"],
     category="util",
-    version="1.1.0",
+    version="1.1.1",
 )
 class IntsToStringsInvocation(BaseInvocation):
     """Converts an integer or collection of integers to a collection of strings"""
@@ -443,8 +428,6 @@ class IntsToStringsInvocation(BaseInvocation):
     )
 
     def invoke(self, context: InvocationContext) -> StringCollectionOutput:
-        if self.ints is None:
-            raise Exception("No int or collection of ints provided")
         return StringCollectionOutput(
             collection=[str(x) for x in self.ints] if isinstance(self.ints, list) else [str(self.ints)]
         )
@@ -673,7 +656,7 @@ class XYImageCollectInvocation(BaseInvocation):
     title="XYImages To Grid",
     tags=["xy", "grid", "image"],
     category="grid",
-    version="1.3.0",
+    version="1.3.1",
 )
 class XYImagesToGridInvocation(BaseInvocation, WithMetadata, WithBoard):
     """Takes Collection of XYImages (json of (x_item,y_item,image_name)array), sorts the images into X,Y and creates a grid image with labels"""
@@ -714,9 +697,11 @@ class XYImagesToGridInvocation(BaseInvocation, WithMetadata, WithBoard):
         row_height = int(max([image.height for image in images]) * self.scale_factor)
         resample_mode = PIL_RESAMPLING_MAP[self.resample_mode]
 
-        # Note - font may be found either in the repo if running an editable install, or in the venv if running a package install
-        font_path = [x for x in [Path(y, "inter/Inter-Regular.ttf") for y in font_assets.__path__] if x.exists()]
-        font = ImageFont.truetype(font_path[0].as_posix(), self.label_font_size)
+        import invokeai.assets.fonts.inter as fp
+
+        font_path = os.path.join(fp.__path__[0], "Inter-Regular.ttf")
+        assert os.path.exists(font_path), f"Font file not found: {font_path}"
+        font = ImageFont.truetype(font_path, self.label_font_size)
 
         # Wrap labels
         x_labels_max_chars = int(column_width // (self.label_font_size * 0.6))
@@ -725,10 +710,9 @@ class XYImagesToGridInvocation(BaseInvocation, WithMetadata, WithBoard):
         y_labels_wrapped = [textwrap.wrap(y.rstrip(), y_labels_max_chars) for y in y_labels]
 
         # Calculate x_label_height based on the number of lines they are wrapped to
-        top_label_heights = [
-            len(label) * (font.getbbox("hg")[3] - font.getbbox("hg")[1] + 5) for label in x_labels_wrapped
-        ]
-        top_label_height = max(top_label_heights)
+        font_height = sum(font.getmetrics())
+        max_lines = max(len(label) for label in x_labels_wrapped)
+        top_label_height = (max_lines * font_height) + 5
 
         # Calculate output image size
         output_width = column_width * columns + left_label_width
