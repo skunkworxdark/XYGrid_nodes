@@ -349,6 +349,7 @@ These nodes provide ways of inputting and converting the X & Y data into a colle
 |-|-|
 |`Main Model To String`| Converts an SD Main Model to a string.<BR> The intended use is to be fed into a `collect` node that can then be passed into the `XY Product` node.|
 |`SDXL Model To String`| Converts an SDXL Model to a string.<BR> The intended use is to be fed into a `collect` node that can then be passed into the `XY Product` node.|
+|`Lora To String`| Converts a lora Model to a string.<BR> The intended use is to be fed into a `collect` node that can then be passed into the `XY Product` node.|
 |`Scheduler To String`| Converts a scheduler to a string.<BR> The intended use is to be fed into a `collect` node that can then be passed into the `XY Product` node.|
 |`Floats To Strings`| Converts a Float or collections of Floats to a collection of strings.<BR> The intended use is to take a float collection from a `Float Range` node that can be passed into the `XY Product` node.|
 |`Ints To Strings`| Converts an Integer or collection of Integers to a collection of strings.<BR> The intended use is to take an Integer collection from an `Integer Range` node that can be passed into the `XY Product` node.|
@@ -375,6 +376,7 @@ These nodes provide a way of extracting the X and Y data from `XY` & `XYImage` c
 |`String To Scheduler`|Converts a string to a scheduler. This is needed to convert the output of the `XY Expand` node before it can be used as input by nodes that accept the scheduler data type.  Scheduler has to be provided as a string via a `CSV` and `string` based node in the internal name format.<BR> It is suggested to use the Scheduler To String node to generate the input. You can also use plain text from the following values (ddim, ddpm, deis, lms, lms_k, pndm, heun, heun_k, euler, euler_k, euler_a, kdpm_2, kdpm_2_a, dpmpp_2s, dpmpp_2s_k, dpmpp_2m, dpmpp_2m_k, dpmpp_2m_sde, dpmpp_2m_sde_k, dpmpp_sde, dpmpp_sde_k, unipc) if in the future these are added to then the list can be found in the core schedulers.py file|
 |`String To Main Model`|Converts a string to an SD Main Model. This is needed to convert the output of the `XY Expand` node before it can be used as input into the `Main Model Input` node|
 |`String To SDXL Model`|Converts a string to an SDXL Main Model. This is needed to convert the output of the `XY Expand` node before it can be used as input into the `SDXL Main Model Input` node|
+|`String To Lora`|Converts a string to an LoRA Model. This is needed to convert the output of the `XY Expand` node before it can be used as input into a lora node|
 |`Main Model Input`|Inherited version of the core `Main Model` node with the model exposed as an input|
 |`SDXL Main Model Input`|Inherited version of the core `SDXL Main Model` node with the model exposed as an input|
 |`XYImage Collect`|The job of this node is to collect the generated Images and the X & Y items in a single place so they can be passed onto the `Collect` node and then onto the `XYImage To Grid` or `XYImage Tile To Image` nodes.|

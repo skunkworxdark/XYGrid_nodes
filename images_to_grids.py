@@ -335,6 +335,33 @@ class StringToSDXLModelInvocation(BaseInvocation):
         return StringToSDXLModelOutput(model=model, name=f"{model.base}: {model.name}")
 
 
+@invocation_output("string_to_lora_output")
+class StringToLoraOutput(BaseInvocationOutput):
+    """String to Lora model output"""
+
+    model: ModelIdentifierField = OutputField(
+        description=FieldDescriptions.lora_model, title="Model", ui_type=UIType.LoRAModel
+    )
+    name: str = OutputField(description="Model Name", title="Name")
+
+
+@invocation(
+    "string_to_lora",
+    title="String To LoRA",
+    tags=["model", "lora"],
+    category="model",
+    version="1.0.0",
+)
+class StringToLoraInvocation(BaseInvocation):
+    """Loads a lora from a json string, outputting its submodels."""
+
+    model_string: str = InputField(description="string containing a Model to convert")
+
+    def invoke(self, context: InvocationContext) -> StringToLoraOutput:
+        model = ModelIdentifierField.model_validate_json(self.model_string)
+        return StringToLoraOutput(model=model, name=f"{model.base}: {model.name}")
+
+
 @invocation(
     "main_model_to_string",
     title="Main Model To String",
@@ -364,6 +391,22 @@ class SDXLModelToStringInvocation(BaseInvocation):
     model: ModelIdentifierField = InputField(
         description=FieldDescriptions.sdxl_main_model, ui_type=UIType.SDXLMainModel
     )
+
+    def invoke(self, context: InvocationContext) -> StringOutput:
+        return StringOutput(value=self.model.model_dump_json())
+
+
+@invocation(
+    "lora_to_string",
+    title="LoRA To String",
+    tags=["model", "lora"],
+    category="model",
+    version="1.0.0",
+)
+class LoraToStringInvocation(BaseInvocation):
+    """Converts an lora Model to a JSONString"""
+
+    model: ModelIdentifierField = InputField(description=FieldDescriptions.lora_model, ui_type=UIType.LoRAModel)
 
     def invoke(self, context: InvocationContext) -> StringOutput:
         return StringOutput(value=self.model.model_dump_json())
