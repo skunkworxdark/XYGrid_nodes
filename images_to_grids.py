@@ -8,7 +8,7 @@ import os
 import re
 import textwrap
 from itertools import product
-from typing import Any, Literal, Union
+from typing import Any, Literal, Optional, Union
 
 import cv2
 import numpy as np
@@ -16,8 +16,10 @@ from PIL import Image, ImageDraw, ImageFilter, ImageFont, ImageOps
 from PIL.Image import Image as PILImageType
 
 from invokeai.app.invocations.constants import LATENT_SCALE_FACTOR
+from invokeai.app.invocations.flux_model_loader import FluxModelLoaderInvocation, FluxModelLoaderOutput
 from invokeai.app.invocations.image import PIL_RESAMPLING_MAP, PIL_RESAMPLING_MODES
 from invokeai.app.invocations.model import MainModelLoaderInvocation
+from invokeai.app.invocations.sd3_model_loader import Sd3ModelLoaderInvocation, Sd3ModelLoaderOutput
 from invokeai.app.invocations.sdxl import SDXLModelLoaderInvocation, SDXLModelLoaderOutput
 from invokeai.invocation_api import (
     SCHEDULER_NAME_VALUES,
@@ -283,9 +285,80 @@ class SDXLModelLoaderInputInvocation(SDXLModelLoaderInvocation):
         return super().invoke(context)
 
 
-@invocation_output("string_to_model_output")
-class StringToModelOutput(BaseInvocationOutput):
-    """String to SDXL model output"""
+@invocation(
+    "flux_model_loader_input",
+    title="FLUX Main Model Input",
+    tags=["model", "flux"],
+    category="model",
+    version="1.0.0",
+)
+class FluxModelLoaderInputInvocation(FluxModelLoaderInvocation):
+    """Loads a flux model from an input, outputting its submodels."""
+
+    model: ModelIdentifierField = InputField(description=FieldDescriptions.flux_model, ui_type=UIType.FluxMainModel)
+
+    t5_encoder_model: ModelIdentifierField = InputField(
+        description=FieldDescriptions.t5_encoder, ui_type=UIType.T5EncoderModel, title="T5 Encoder"
+    )
+
+    clip_embed_model: ModelIdentifierField = InputField(
+        description=FieldDescriptions.clip_embed_model,
+        ui_type=UIType.CLIPEmbedModel,
+        title="CLIP Embed",
+    )
+
+    vae_model: ModelIdentifierField = InputField(
+        description=FieldDescriptions.vae_model, ui_type=UIType.FluxVAEModel, title="VAE"
+    )
+
+    def invoke(self, context: InvocationContext) -> FluxModelLoaderOutput:
+        return super().invoke(context)
+
+
+@invocation(
+    "sd3_model_loader_input",
+    title="SD3 Main Model Input",
+    tags=["model", "sd3"],
+    category="model",
+    version="1.0.0",
+)
+class SD3ModelLoaderInputInvocation(Sd3ModelLoaderInvocation):
+    """Loads a sd3 model from an input, outputting its submodels."""
+
+    model: ModelIdentifierField = InputField(description=FieldDescriptions.sd3_model, ui_type=UIType.SD3MainModel)
+
+    t5_encoder_model: Optional[ModelIdentifierField] = InputField(
+        description=FieldDescriptions.t5_encoder,
+        ui_type=UIType.T5EncoderModel,
+        title="T5 Encoder",
+        default=None,
+    )
+
+    clip_l_model: Optional[ModelIdentifierField] = InputField(
+        description=FieldDescriptions.clip_embed_model,
+        ui_type=UIType.CLIPLEmbedModel,
+        title="CLIP L Encoder",
+        default=None,
+    )
+
+    clip_g_model: Optional[ModelIdentifierField] = InputField(
+        description=FieldDescriptions.clip_g_model,
+        ui_type=UIType.CLIPGEmbedModel,
+        title="CLIP G Encoder",
+        default=None,
+    )
+
+    vae_model: Optional[ModelIdentifierField] = InputField(
+        description=FieldDescriptions.vae_model, ui_type=UIType.VAEModel, title="VAE", default=None
+    )
+
+    def invoke(self, context: InvocationContext) -> Sd3ModelLoaderOutput:
+        return super().invoke(context)
+
+
+@invocation_output("string_to_main_model_output")
+class StringToMainModelOutput(BaseInvocationOutput):
+    """String to main model output"""
 
     model: ModelIdentifierField = OutputField(description=FieldDescriptions.main_model, title="Model")
     name: str = OutputField(description="Model Name", title="Name")
@@ -303,9 +376,9 @@ class StringToMainModelInvocation(BaseInvocation):
 
     model_string: str = InputField(description="string containing a Model to convert")
 
-    def invoke(self, context: InvocationContext) -> StringToModelOutput:
+    def invoke(self, context: InvocationContext) -> StringToMainModelOutput:
         model = ModelIdentifierField.model_validate_json(self.model_string)
-        return StringToModelOutput(model=model, name=f"{model.base}: {model.name}")
+        return StringToMainModelOutput(model=model, name=f"{model.base}: {model.name}")
 
 
 @invocation_output("string_to_sdxl_model_output")
@@ -362,6 +435,31 @@ class StringToLoraInvocation(BaseInvocation):
         return StringToLoraOutput(model=model, name=f"{model.base}: {model.name}")
 
 
+@invocation_output("string_to_model_output")
+class StringToModelOutput(BaseInvocationOutput):
+    """String to model output"""
+
+    model: ModelIdentifierField = OutputField(description="Model identifier", title="Model")
+    name: str = OutputField(description="Model Name", title="Name")
+
+
+@invocation(
+    "string_to_model",
+    title="String To Model",
+    tags=["model"],
+    category="model",
+    version="1.0.0",
+)
+class StringToModelInvocation(BaseInvocation):
+    """Loads a model from a json string, outputting its submodels."""
+
+    model_string: str = InputField(description="string containing a Model to convert")
+
+    def invoke(self, context: InvocationContext) -> StringToModelOutput:
+        model = ModelIdentifierField.model_validate_json(self.model_string)
+        return StringToModelOutput(model=model, name=f"{model.base}: {model.name}")
+
+
 @invocation(
     "main_model_to_string",
     title="Main Model To String",
@@ -397,6 +495,38 @@ class SDXLModelToStringInvocation(BaseInvocation):
 
 
 @invocation(
+    "flux_model_to_string",
+    title="Flux Model To String",
+    tags=["model", "flux"],
+    category="model",
+    version="1.0.0",
+)
+class FluxModelToStringInvocation(BaseInvocation):
+    """Converts an Flux Model to a JSONString"""
+
+    model: ModelIdentifierField = InputField(description=FieldDescriptions.flux_model, ui_type=UIType.FluxMainModel)
+
+    def invoke(self, context: InvocationContext) -> StringOutput:
+        return StringOutput(value=self.model.model_dump_json())
+
+
+@invocation(
+    "sd3_model_to_string",
+    title="SD3 Model To String",
+    tags=["model", "sd3"],
+    category="model",
+    version="1.0.0",
+)
+class Sd3ModelToStringInvocation(BaseInvocation):
+    """Converts an SD3 Model to a JSONString"""
+
+    model: ModelIdentifierField = InputField(description=FieldDescriptions.sd3_model, ui_type=UIType.SD3MainModel)
+
+    def invoke(self, context: InvocationContext) -> StringOutput:
+        return StringOutput(value=self.model.model_dump_json())
+
+
+@invocation(
     "lora_to_string",
     title="LoRA To String",
     tags=["model", "lora"],
@@ -407,6 +537,22 @@ class LoraToStringInvocation(BaseInvocation):
     """Converts an lora Model to a JSONString"""
 
     model: ModelIdentifierField = InputField(description=FieldDescriptions.lora_model, ui_type=UIType.LoRAModel)
+
+    def invoke(self, context: InvocationContext) -> StringOutput:
+        return StringOutput(value=self.model.model_dump_json())
+
+
+@invocation(
+    "model_to_string",
+    title="Model To String",
+    tags=["model", "lora"],
+    category="model",
+    version="1.0.0",
+)
+class ModelToStringInvocation(BaseInvocation):
+    """Converts an Model to a JSONString"""
+
+    model: ModelIdentifierField = InputField(description="The model to select", title="Model")
 
     def invoke(self, context: InvocationContext) -> StringOutput:
         return StringOutput(value=self.model.model_dump_json())

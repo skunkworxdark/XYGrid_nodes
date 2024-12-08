@@ -347,8 +347,11 @@ The best way to understand this is to look at the XYGrid workflow examples and p
 These nodes provide ways of inputting and converting the X & Y data into a collection of strings that the `XY Product` node can use.
 |Node|Description|
 |-|-|
+|`Model To String`| Converts an generic Model to a string. All models listed with no filters<BR> The intended use is to be fed into a `collect` node that can then be passed into the `XY Product` node.|
 |`Main Model To String`| Converts an SD Main Model to a string.<BR> The intended use is to be fed into a `collect` node that can then be passed into the `XY Product` node.|
 |`SDXL Model To String`| Converts an SDXL Model to a string.<BR> The intended use is to be fed into a `collect` node that can then be passed into the `XY Product` node.|
+|`SD3 Model To String`| Converts an SD3 Model to a string.<BR> The intended use is to be fed into a `collect` node that can then be passed into the `XY Product` node.|
+|`Flux Model To String`| Converts an SDXL Model to a string.<BR> The intended use is to be fed into a `collect` node that can then be passed into the `XY Product` node.|
 |`Lora To String`| Converts a lora Model to a string.<BR> The intended use is to be fed into a `collect` node that can then be passed into the `XY Product` node.|
 |`Scheduler To String`| Converts a scheduler to a string.<BR> The intended use is to be fed into a `collect` node that can then be passed into the `XY Product` node.|
 |`Floats To Strings`| Converts a Float or collections of Floats to a collection of strings.<BR> The intended use is to take a float collection from a `Float Range` node that can be passed into the `XY Product` node.|
@@ -377,8 +380,11 @@ These nodes provide a way of extracting the X and Y data from `XY` & `XYImage` c
 |`String To Main Model`|Converts a string to an SD Main Model. This is needed to convert the output of the `XY Expand` node before it can be used as input into the `Main Model Input` node|
 |`String To SDXL Model`|Converts a string to an SDXL Main Model. This is needed to convert the output of the `XY Expand` node before it can be used as input into the `SDXL Main Model Input` node|
 |`String To Lora`|Converts a string to an LoRA Model. This is needed to convert the output of the `XY Expand` node before it can be used as input into a lora node|
+|`String To Model`|Converts a string to a generic Model. This is needed to convert the output of the `XY Expand` node before it can be used as input into one of the `XXX Main Model Input` nodes|
 |`Main Model Input`|Inherited version of the core `Main Model` node with the model exposed as an input|
 |`SDXL Main Model Input`|Inherited version of the core `SDXL Main Model` node with the model exposed as an input|
+|`SD3 Main Model Input`|Inherited version of the core `SD3 Main Model` node with the models exposed as an input|
+|`Flux Main Model Input`|Inherited version of the core `Flux Main Model` node with the models exposed as an input|
 |`XYImage Collect`|The job of this node is to collect the generated Images and the X & Y items in a single place so they can be passed onto the `Collect` node and then onto the `XYImage To Grid` or `XYImage Tile To Image` nodes.|
 
 <details><summary>Node Example images</summary>
