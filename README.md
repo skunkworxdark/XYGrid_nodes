@@ -56,13 +56,9 @@ Delete the `XYGrid_nodes` folder. Or rename it to `_XYGrid_nodes` so InvokeAI wi
 
 
 ## Known issues
-- `Images To Grids` output images don't automatically appear onscreen on a board.
-  - Refresh the browser or force the board to load more images.
-  - Or add iterate and show/save image nodes to the output of the `Images To Grids` node.
 - Image generation will stop with an invalid scheduler name.
 
 ## TODO
-- Fix the `Images To Grids` node output not automatically appearing onscreen in the board without workarounds
 - Add other "types to string" and "string to types" conversions for other parameters e.g.  Lora, images etc...
 - Create a useable way to select multiple things from a list (checkbox selection) to enable selecting things from lists like models and Loras etc
 
@@ -347,7 +343,7 @@ The best way to understand this is to look at the XYGrid workflow examples and p
 These nodes provide ways of inputting and converting the X & Y data into a collection of strings that the `XY Product` node can use.
 |Node|Description|
 |-|-|
-|`Model To String`| Converts an generic Model to a string. All models listed with no filters<BR> The intended use is to be fed into a `collect` node that can then be passed into the `XY Product` node.|
+|`Model To String`| Converts any generic Model to a string. All models listed with no filters<BR> The intended use is to be fed into a `collect` node that can then be passed into the `XY Product` node.|
 |`Main Model To String`| Converts an SD Main Model to a string.<BR> The intended use is to be fed into a `collect` node that can then be passed into the `XY Product` node.|
 |`SDXL Model To String`| Converts an SDXL Model to a string.<BR> The intended use is to be fed into a `collect` node that can then be passed into the `XY Product` node.|
 |`SD3 Model To String`| Converts an SD3 Model to a string.<BR> The intended use is to be fed into a `collect` node that can then be passed into the `XY Product` node.|

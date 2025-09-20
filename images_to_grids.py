@@ -21,6 +21,7 @@ from invokeai.app.invocations.image import PIL_RESAMPLING_MAP, PIL_RESAMPLING_MO
 from invokeai.app.invocations.model import MainModelLoaderInvocation
 from invokeai.app.invocations.sd3_model_loader import Sd3ModelLoaderInvocation, Sd3ModelLoaderOutput
 from invokeai.app.invocations.sdxl import SDXLModelLoaderInvocation, SDXLModelLoaderOutput
+from invokeai.backend.model_manager.taxonomy import BaseModelType, ClipVariantType, ModelType
 from invokeai.invocation_api import (
     SCHEDULER_NAME_VALUES,
     BaseInvocation,
@@ -258,12 +259,16 @@ def csv_line_to_list(csv_string: str) -> list[str]:
     title="Main Model Input",
     tags=["model"],
     category="model",
-    version="1.1.0",
+    version="1.2.0",
 )
 class MainModelLoaderInputInvocation(MainModelLoaderInvocation):
     """Loads a main model from an input, outputting its submodels."""
 
-    model: ModelIdentifierField = InputField(description=FieldDescriptions.main_model, ui_type=UIType.MainModel)
+    model: ModelIdentifierField = InputField(
+        description=FieldDescriptions.main_model,
+        ui_model_base=[BaseModelType.StableDiffusion1, BaseModelType.StableDiffusion2],
+        ui_model_type=ModelType.Main,
+    )
 
     def invoke(self, context: InvocationContext) -> ModelLoaderOutput:
         return super().invoke(context)
@@ -274,12 +279,16 @@ class MainModelLoaderInputInvocation(MainModelLoaderInvocation):
     title="SDXL Main Model Input",
     tags=["model", "sdxl"],
     category="model",
-    version="1.1.0",
+    version="1.2.0",
 )
 class SDXLModelLoaderInputInvocation(SDXLModelLoaderInvocation):
     """Loads a sdxl model from an input, outputting its submodels."""
 
-    model: ModelIdentifierField = InputField(description=FieldDescriptions.main_model, ui_type=UIType.SDXLMainModel)
+    model: ModelIdentifierField = InputField(
+        description=FieldDescriptions.sdxl_main_model,
+        ui_model_base=BaseModelType.StableDiffusionXL,
+        ui_model_type=ModelType.Main,
+    )
 
     def invoke(self, context: InvocationContext) -> SDXLModelLoaderOutput:
         return super().invoke(context)
@@ -290,25 +299,34 @@ class SDXLModelLoaderInputInvocation(SDXLModelLoaderInvocation):
     title="FLUX Main Model Input",
     tags=["model", "flux"],
     category="model",
-    version="1.0.0",
+    version="1.1.0",
 )
 class FluxModelLoaderInputInvocation(FluxModelLoaderInvocation):
     """Loads a flux model from an input, outputting its submodels."""
 
-    model: ModelIdentifierField = InputField(description=FieldDescriptions.flux_model, ui_type=UIType.FluxMainModel)
+    model: ModelIdentifierField = InputField(
+        description=FieldDescriptions.flux_model,
+        ui_model_base=BaseModelType.Flux,
+        ui_model_type=ModelType.Main,
+    )
 
     t5_encoder_model: ModelIdentifierField = InputField(
-        description=FieldDescriptions.t5_encoder, ui_type=UIType.T5EncoderModel, title="T5 Encoder"
+        description=FieldDescriptions.t5_encoder,
+        title="T5 Encoder",
+        ui_model_type=ModelType.T5Encoder,
     )
 
     clip_embed_model: ModelIdentifierField = InputField(
         description=FieldDescriptions.clip_embed_model,
-        ui_type=UIType.CLIPEmbedModel,
         title="CLIP Embed",
+        ui_model_type=ModelType.CLIPEmbed,
     )
 
     vae_model: ModelIdentifierField = InputField(
-        description=FieldDescriptions.vae_model, ui_type=UIType.FluxVAEModel, title="VAE"
+        description=FieldDescriptions.vae_model,
+        title="VAE",
+        ui_model_base=BaseModelType.Flux,
+        ui_model_type=ModelType.VAE,
     )
 
     def invoke(self, context: InvocationContext) -> FluxModelLoaderOutput:
@@ -320,36 +338,46 @@ class FluxModelLoaderInputInvocation(FluxModelLoaderInvocation):
     title="SD3 Main Model Input",
     tags=["model", "sd3"],
     category="model",
-    version="1.0.0",
+    version="1.1.0",
 )
 class SD3ModelLoaderInputInvocation(Sd3ModelLoaderInvocation):
     """Loads a sd3 model from an input, outputting its submodels."""
 
-    model: ModelIdentifierField = InputField(description=FieldDescriptions.sd3_model, ui_type=UIType.SD3MainModel)
+    model: ModelIdentifierField = InputField(
+        description=FieldDescriptions.sd3_model,
+        ui_model_base=BaseModelType.StableDiffusion3,
+        ui_model_type=ModelType.Main,
+    )
 
     t5_encoder_model: Optional[ModelIdentifierField] = InputField(
         description=FieldDescriptions.t5_encoder,
-        ui_type=UIType.T5EncoderModel,
         title="T5 Encoder",
         default=None,
+        ui_model_type=ModelType.T5Encoder,
     )
 
     clip_l_model: Optional[ModelIdentifierField] = InputField(
         description=FieldDescriptions.clip_embed_model,
-        ui_type=UIType.CLIPLEmbedModel,
         title="CLIP L Encoder",
         default=None,
+        ui_model_type=ModelType.CLIPEmbed,
+        ui_model_variant=ClipVariantType.L,
     )
 
     clip_g_model: Optional[ModelIdentifierField] = InputField(
         description=FieldDescriptions.clip_g_model,
-        ui_type=UIType.CLIPGEmbedModel,
         title="CLIP G Encoder",
         default=None,
+        ui_model_type=ModelType.CLIPEmbed,
+        ui_model_variant=ClipVariantType.G,
     )
 
     vae_model: Optional[ModelIdentifierField] = InputField(
-        description=FieldDescriptions.vae_model, ui_type=UIType.VAEModel, title="VAE", default=None
+        description=FieldDescriptions.vae_model,
+        title="VAE",
+        default=None,
+        ui_model_base=BaseModelType.StableDiffusion3,
+        ui_model_type=ModelType.VAE,
     )
 
     def invoke(self, context: InvocationContext) -> Sd3ModelLoaderOutput:
@@ -360,7 +388,10 @@ class SD3ModelLoaderInputInvocation(Sd3ModelLoaderInvocation):
 class StringToMainModelOutput(BaseInvocationOutput):
     """String to main model output"""
 
-    model: ModelIdentifierField = OutputField(description=FieldDescriptions.main_model, title="Model")
+    model: ModelIdentifierField = OutputField(
+        description=FieldDescriptions.main_model,
+        title="Model",
+    )
     name: str = OutputField(description="Model Name", title="Name")
 
 
@@ -386,7 +417,8 @@ class StringToSDXLModelOutput(BaseInvocationOutput):
     """String to SDXL main model output"""
 
     model: ModelIdentifierField = OutputField(
-        description=FieldDescriptions.main_model, title="Model", ui_type=UIType.SDXLMainModel
+        description=FieldDescriptions.main_model,
+        title="Model",
     )
     name: str = OutputField(description="Model Name", title="Name")
 
@@ -413,7 +445,8 @@ class StringToLoraOutput(BaseInvocationOutput):
     """String to Lora model output"""
 
     model: ModelIdentifierField = OutputField(
-        description=FieldDescriptions.lora_model, title="Model", ui_type=UIType.LoRAModel
+        description=FieldDescriptions.lora_model,
+        title="Model",  # , ui_type=UIType.LoRAModel
     )
     name: str = OutputField(description="Model Name", title="Name")
 
@@ -439,7 +472,10 @@ class StringToLoraInvocation(BaseInvocation):
 class StringToModelOutput(BaseInvocationOutput):
     """String to model output"""
 
-    model: ModelIdentifierField = OutputField(description="Model identifier", title="Model")
+    model: ModelIdentifierField = OutputField(
+        description="Model identifier",
+        title="Model",
+    )
     name: str = OutputField(description="Model Name", title="Name")
 
 
@@ -465,12 +501,16 @@ class StringToModelInvocation(BaseInvocation):
     title="Main Model To String",
     tags=["model", "picker"],
     category="model",
-    version="1.1.0",
+    version="1.2.0",
 )
 class MainModelToStringInvocation(BaseInvocation):
     """Converts a Main Model to a JSONString"""
 
-    model: ModelIdentifierField = InputField(description=FieldDescriptions.main_model, ui_type=UIType.MainModel)
+    model: ModelIdentifierField = InputField(
+        description=FieldDescriptions.main_model,
+        ui_model_base=[BaseModelType.StableDiffusion1, BaseModelType.StableDiffusion2],
+        ui_model_type=ModelType.Main,
+    )
 
     def invoke(self, context: InvocationContext) -> StringOutput:
         return StringOutput(value=self.model.model_dump_json())
@@ -481,13 +521,16 @@ class MainModelToStringInvocation(BaseInvocation):
     title="SDXL Model To String",
     tags=["model", "sdxl"],
     category="model",
-    version="1.1.0",
+    version="1.2.0",
 )
 class SDXLModelToStringInvocation(BaseInvocation):
     """Converts an SDXL Model to a JSONString"""
 
     model: ModelIdentifierField = InputField(
-        description=FieldDescriptions.sdxl_main_model, ui_type=UIType.SDXLMainModel
+        description=FieldDescriptions.sdxl_main_model,
+        # ui_type=UIType.SDXLMainModel,
+        ui_model_base=BaseModelType.StableDiffusionXL,
+        ui_model_type=ModelType.Main,
     )
 
     def invoke(self, context: InvocationContext) -> StringOutput:
@@ -499,12 +542,16 @@ class SDXLModelToStringInvocation(BaseInvocation):
     title="Flux Model To String",
     tags=["model", "flux"],
     category="model",
-    version="1.0.0",
+    version="1.1.0",
 )
 class FluxModelToStringInvocation(BaseInvocation):
     """Converts an Flux Model to a JSONString"""
 
-    model: ModelIdentifierField = InputField(description=FieldDescriptions.flux_model, ui_type=UIType.FluxMainModel)
+    model: ModelIdentifierField = InputField(
+        description=FieldDescriptions.flux_model,
+        ui_model_base=BaseModelType.Flux,
+        ui_model_type=ModelType.Main,
+    )
 
     def invoke(self, context: InvocationContext) -> StringOutput:
         return StringOutput(value=self.model.model_dump_json())
@@ -515,12 +562,16 @@ class FluxModelToStringInvocation(BaseInvocation):
     title="SD3 Model To String",
     tags=["model", "sd3"],
     category="model",
-    version="1.0.0",
+    version="1.1.0",
 )
 class Sd3ModelToStringInvocation(BaseInvocation):
     """Converts an SD3 Model to a JSONString"""
 
-    model: ModelIdentifierField = InputField(description=FieldDescriptions.sd3_model, ui_type=UIType.SD3MainModel)
+    model: ModelIdentifierField = InputField(
+        description=FieldDescriptions.sd3_model,
+        ui_model_base=BaseModelType.StableDiffusion3,
+        ui_model_type=ModelType.Main,
+    )
 
     def invoke(self, context: InvocationContext) -> StringOutput:
         return StringOutput(value=self.model.model_dump_json())
@@ -531,12 +582,15 @@ class Sd3ModelToStringInvocation(BaseInvocation):
     title="LoRA To String",
     tags=["model", "lora"],
     category="model",
-    version="1.0.0",
+    version="1.1.0",
 )
 class LoraToStringInvocation(BaseInvocation):
     """Converts an lora Model to a JSONString"""
 
-    model: ModelIdentifierField = InputField(description=FieldDescriptions.lora_model, ui_type=UIType.LoRAModel)
+    model: ModelIdentifierField = InputField(
+        description=FieldDescriptions.lora_model,
+        ui_model_type=ModelType.LoRA,
+    )
 
     def invoke(self, context: InvocationContext) -> StringOutput:
         return StringOutput(value=self.model.model_dump_json())
