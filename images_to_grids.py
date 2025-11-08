@@ -1308,6 +1308,92 @@ class MinimumOverlapXYTileGenerator(BaseInvocation):
         return TilesOutput(tiles=xytiles)
 
 
+@invocation_output("tile_size_output")
+class TileSizeOutput(BaseInvocationOutput):
+    """Tile Size Output"""
+
+    tile_width: int = OutputField(description="Tile Width")
+    tile_height: int = OutputField(description="Tile Height")
+
+
+@invocation(
+    "optimized_tile_size_from_area",
+    title="Optimized Tile Size From Area",
+    tags=["xy", "tile"],
+    category="tile",
+    version="1.0.0",
+)
+class TileSizeFromOverlapInvocation(BaseInvocation):
+    width: int = InputField(ge=1, description="Image width in pixels")
+    height: int = InputField(ge=1, description="Image height in pixels")
+    min_area: int = InputField(ge=1, description="Minimum tile area", default=512 * 512)
+    max_area: int = InputField(ge=1, description="Maximum tile area", default=1024 * 1024)
+    overlap: int = InputField(ge=0, description="Minimum overlap in pixels (both directions)")
+    max_tile_dim: int = InputField(ge=0, description="Maximum dimension of a tile (to limit artifacts)", default=2048)
+
+    def _round_up_16(self, x: int) -> int:
+        return (x + 15) // 16 * 16
+
+    def invoke(self, context: InvocationContext) -> TileSizeOutput:
+        w = self.width
+        h = self.height
+        min_a = self.min_area
+        max_a = self.max_area
+        o_pixels = self.overlap
+        max_tile_dim = self.max_tile_dim
+
+        best = None  # (area, wt, ht)
+
+        for Nx in range(1, w + 1):
+            wt_min = math.ceil((w + (Nx - 1) * o_pixels) / Nx)
+            if wt_min > w:
+                continue
+
+            for Ny in range(1, h + 1):
+                ht_min = math.ceil((h + (Ny - 1) * o_pixels) / Ny)
+                if ht_min > h:
+                    continue
+
+                wt = self._round_up_16(wt_min)
+
+                ht_needed_for_area = math.ceil(min_a / wt) if wt > 0 else h + 1
+                ht = self._round_up_16(max(ht_min, ht_needed_for_area))
+
+                # new hard cap on dimensions
+                if wt > w or ht > h:
+                    continue
+                if wt > max_tile_dim or ht > max_tile_dim:
+                    continue
+
+                area = wt * ht
+                if area < min_a or area > max_a:
+                    continue
+
+                if Nx == 1:
+                    sx = 0.0
+                else:
+                    sx = (w - wt) / (Nx - 1)
+
+                if Ny == 1:
+                    sy = 0.0
+                else:
+                    sy = (h - ht) / (Ny - 1)
+
+                if Nx > 1 and sx > (wt - o_pixels):
+                    continue
+                if Ny > 1 and sy > (ht - o_pixels):
+                    continue
+
+                if best is None or area > best[0]:
+                    best = (area, wt, ht)
+
+        if best is None:
+            raise ValueError("No feasible tile size for given constraints")
+
+        _, wt_best, ht_best = best
+        return TileSizeOutput(tile_width=wt_best, tile_height=ht_best)
+
+
 @invocation(
     "even_split_xy_tile_generator",
     title="Even Split XYImage Tile Generator",
