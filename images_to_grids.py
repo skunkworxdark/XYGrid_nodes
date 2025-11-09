@@ -1321,14 +1321,16 @@ class TileSizeOutput(BaseInvocationOutput):
     title="Optimized Tile Size From Area",
     tags=["xy", "tile"],
     category="tile",
-    version="1.0.0",
+    version="1.0.1",
 )
-class TileSizeFromOverlapInvocation(BaseInvocation):
+class OptimizedTileSizeFromAreaInvocation(BaseInvocation):
+    """Cuts up an image into overlapping tiles, optimized for the constraints of min area, max area, overlap, and
+    maximum tile dimension (either width or height). Returns ideal width and height."""
     width: int = InputField(ge=1, description="Image width in pixels")
     height: int = InputField(ge=1, description="Image height in pixels")
     min_area: int = InputField(ge=1, description="Minimum tile area", default=512 * 512)
     max_area: int = InputField(ge=1, description="Maximum tile area", default=1024 * 1024)
-    overlap: int = InputField(ge=0, description="Minimum overlap in pixels (both directions)")
+    overlap: int = InputField(gt=0, description="Minimum overlap in pixels (both directions)")
     max_tile_dim: int = InputField(ge=0, description="Maximum dimension of a tile (to limit artifacts)", default=2048)
 
     def _round_up_16(self, x: int) -> int:
@@ -1344,12 +1346,15 @@ class TileSizeFromOverlapInvocation(BaseInvocation):
 
         best = None  # (area, wt, ht)
 
-        for Nx in range(1, w + 1):
+        max_Nx = min(w, (w // o_pixels) + 2)
+        max_Ny = min(h, (h // o_pixels) + 2)
+
+        for Nx in range(1, max_Nx + 1):
             wt_min = math.ceil((w + (Nx - 1) * o_pixels) / Nx)
             if wt_min > w:
                 continue
 
-            for Ny in range(1, h + 1):
+            for Ny in range(1, max_Ny + 1):
                 ht_min = math.ceil((h + (Ny - 1) * o_pixels) / Ny)
                 if ht_min > h:
                     continue
