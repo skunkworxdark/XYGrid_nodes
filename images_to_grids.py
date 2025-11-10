@@ -1,4 +1,4 @@
-t# 2024 skunkworxdark (https://github.com/skunkworxdark)
+# 2024 skunkworxdark (https://github.com/skunkworxdark)
 
 import csv
 import io
@@ -1707,4 +1707,5 @@ class CropLatentsInvocation(BaseInvocation):
         name = context.tensors.save(tensor=cropped_latents)
 
         return LatentsOutput.build(latents_name=name, latents=cropped_latents)
+
 
