@@ -1,4 +1,4 @@
-# 2024 skunkworxdark (https://github.com/skunkworxdark)
+t# 2024 skunkworxdark (https://github.com/skunkworxdark)
 
 import csv
 import io
@@ -1075,7 +1075,7 @@ class ImagesToGridsInvocation(BaseInvocation, WithMetadata, WithBoard):
                 image = image.resize(
                     (
                         int(image.width * self.scale_factor),
-                        int(image.width * self.scale_factor),
+                        int(image.height * self.scale_factor),
                     ),
                     resample=resample_mode,
                 )
@@ -1707,3 +1707,4 @@ class CropLatentsInvocation(BaseInvocation):
         name = context.tensors.save(tensor=cropped_latents)
 
         return LatentsOutput.build(latents_name=name, latents=cropped_latents)
+
