@@ -175,6 +175,7 @@ These nodes are designed to work together in a workflow. They allow you to split
 - `Image To XYImage Tiles`: Cuts input image into overlapping image tiles. Input from a tile generator node
 - `XYImage Tiles To Image`: Merges tiles into a single image, blending the overlapping areas.
 - `Crop Latents`: cuts a section from a latent image (Used in the global noise versions of example workflows)
+- `Optimized Tile Size From Area`: submitted by @JPPhoto - The new Optimized Tile Size From Area node feeds directly into the minimum overlap tile generator node. It iterates over sizes to find the optimally-sized tile that satisfies input constraints like minimum area, maximum area, overlap, etc. It outputs tiles sized a multiple of 16px so it works with all current models.
 
 The advantage of these nodes is that they enable you to work with larger images than usual by dividing them into smaller tiles, applying transformations, and stitching them back together. The nodes can also create overlapping tiles to improve consistency between tiles, and then blend the overlaps when reconstructing the image.
 <BR><BR>
@@ -198,6 +199,10 @@ Even Split Tile Generator
 #### `Minimum Overlap XYImage Tile Generator`
 Minimum Overlap Tile Generator
 -Keeps tiles at a fixed size but adjusts the overlap to be even across the image but always above the minimum.
+#### `Optimized Tile Size From Area`
+Optimized Tile Size From Area
+- submitted by @JPPhoto
+- The new Optimized Tile Size From Area node feeds directly into the minimum overlap tile generator node. It iterates over sizes to find the optimally-sized tile that satisfies input constraints like minimum area, maximum area, overlap, etc. It outputs tiles sized a multiple of 16px so it works with all current models.
 
 <HR>
 
@@ -389,4 +394,5 @@ These nodes provide a way of extracting the X and Y data from `XY` & `XYImage` c
 ![XY Expand and XY Image Collect](images/XY-Expand-ImageCollect-example.png)
 ![XY-CSV-Expand-ToString-ImageCollect-example](images/XY-CSV-Expand-ToString-ImageCollect-example.png)
 ![XYCollectCSV-Scheduler-example](images/XYCollectCSV-Scheduler-example.png)</details>
+
 
