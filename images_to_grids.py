@@ -24,6 +24,7 @@ from invokeai.app.invocations.sdxl import SDXLModelLoaderInvocation, SDXLModelLo
 from invokeai.backend.model_manager.taxonomy import BaseModelType, ClipVariantType, ModelType
 from invokeai.invocation_api import (
     SCHEDULER_NAME_VALUES,
+    AnyModelConfig,
     BaseInvocation,
     BaseInvocationOutput,
     ColorField,
@@ -493,6 +494,31 @@ class StringToModelInvocation(BaseInvocation):
 
     def invoke(self, context: InvocationContext) -> StringToModelOutput:
         model = ModelIdentifierField.model_validate_json(self.model_string)
+        return StringToModelOutput(model=model, name=f"{model.base}: {model.name}")
+
+
+@invocation(
+    "model_name_to_model",
+    title="Model Name to Model",
+    tags=["model", "config"],
+    version="1.0.0",
+)
+class ModelNameToModelInvocation(BaseInvocation):
+    """Converts a model identified by its string name to a Model"""
+
+    model_name: str = InputField(description="Exact model name (must match exactly one model)")
+
+    def invoke(self, context: InvocationContext) -> StringToModelOutput:
+        matches: list[AnyModelConfig] = context.models.search_by_attrs(name=self.model_name)
+
+        if len(matches) == 0:
+            raise ValueError(f"No model found with name={self.model_name!r}")
+
+        if len(matches) != 1:
+            keys = [getattr(m, "key", None) for m in matches]
+            raise ValueError(f"Model name {self.model_name!r} is not unique; matched keys={keys}")
+
+        model = ModelIdentifierField.from_config(context.models.get_config(matches[0].key))
         return StringToModelOutput(model=model, name=f"{model.base}: {model.name}")
 
 
